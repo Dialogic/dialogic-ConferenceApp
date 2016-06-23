@@ -1,0 +1,953 @@
+package web_converged_demo.clicktocall;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Vector;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import javax.media.mscontrol.MediaConfigException;
+import javax.media.mscontrol.MediaEvent;
+import javax.media.mscontrol.MediaEventListener;
+import javax.media.mscontrol.MediaSession;
+import javax.media.mscontrol.MsControlException;
+import javax.media.mscontrol.MsControlFactory;
+import javax.media.mscontrol.Parameters;
+import javax.media.mscontrol.join.Joinable;
+import javax.media.mscontrol.join.JoinableStream.StreamType;
+import javax.media.mscontrol.mixer.MediaMixer;
+import javax.media.mscontrol.mixer.MixerEvent;
+import javax.media.mscontrol.networkconnection.NetworkConnection;
+import javax.media.mscontrol.resource.AllocationEvent;
+import javax.media.mscontrol.resource.AllocationEventListener;
+import javax.media.mscontrol.resource.video.VideoLayout;
+import javax.media.mscontrol.resource.video.VideoRenderer;
+import javax.media.mscontrol.resource.video.VideoRendererEvent;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.vendor.dialogic.javax.media.mscontrol.dlgcsmil.DlgcsmilDocument;
+import com.vendor.dialogic.javax.media.mscontrol.dlgcsmil.DlgcsmilDocument.Dlgcsmil;
+import com.vendor.dialogic.javax.media.mscontrol.dlgcsmil.LayoutDocument.Layout;
+import com.vendor.dialogic.javax.media.mscontrol.dlgcsmil.LayoutDocument.Layout.Region;
+import com.vendor.dialogic.javax.media.mscontrol.dlgcsmil.ParDocument.Par;
+import com.vendor.dialogic.javax.media.mscontrol.dlgcsmil.RefDocument.Ref;
+import com.vendor.dialogic.javax.media.mscontrol.dlgcsmil.TextDocument.Text;
+
+public class DlgcConference  implements Serializable {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
+	public static class regionLayout
+	{
+		public regionLayout(String sTop, String sLeft, String size) {
+			top = sTop;
+			left = sLeft;
+			relativeSize=size;
+		}
+		String top;
+		String left;
+		String relativeSize;
+	}
+	static public final Map<Integer,regionLayout[]> dlgcsmilSupportRegionTable = new HashMap<Integer,regionLayout[]>();
+
+	static {
+		dlgcsmilSupportRegionTable.put(1, new regionLayout[] {new regionLayout(String.valueOf(0),String.valueOf(0),String.valueOf(100))});
+		
+		dlgcsmilSupportRegionTable.put(2, new regionLayout[] {new regionLayout(String.valueOf(25),String.valueOf(0),String.valueOf(50)),
+				new regionLayout(String.valueOf(25),String.valueOf(50),String.valueOf(50)),
+		});
+
+		dlgcsmilSupportRegionTable.put(4, new regionLayout[] {new regionLayout(String.valueOf(0),String.valueOf(0),String.valueOf(50)),
+				new regionLayout(String.valueOf(0),String.valueOf(50),String.valueOf(50)),
+				new regionLayout(String.valueOf(50),String.valueOf(50),String.valueOf(50)),
+				new regionLayout(String.valueOf(50),String.valueOf(0),String.valueOf(50))
+		});
+
+		dlgcsmilSupportRegionTable.put(6, new regionLayout[] {new regionLayout(String.valueOf(0),String.valueOf(0),String.valueOf(66.666)),
+				new regionLayout(String.valueOf(0),String.valueOf(66.666),String.valueOf(33.333)),
+				new regionLayout(String.valueOf(33.333),String.valueOf(66.666),String.valueOf(33.333)),
+				new regionLayout(String.valueOf(66.666),String.valueOf(66.666),String.valueOf(33.333)),
+				new regionLayout(String.valueOf(66.666),String.valueOf(33.333),String.valueOf(33.333)),
+				new regionLayout(String.valueOf(66.666),String.valueOf(0),String.valueOf(33.333))
+		});
+
+		dlgcsmilSupportRegionTable.put(8, new regionLayout[] {new regionLayout(String.valueOf(0),String.valueOf(0),String.valueOf(75)),
+				new regionLayout(String.valueOf(0),String.valueOf(75),String.valueOf(25)),
+				new regionLayout(String.valueOf(25),String.valueOf(75),String.valueOf(25)),
+				new regionLayout(String.valueOf(50),String.valueOf(75),String.valueOf(25)),
+				new regionLayout(String.valueOf(75),String.valueOf(75),String.valueOf(25)),
+				new regionLayout(String.valueOf(75),String.valueOf(50),String.valueOf(25)),
+				new regionLayout(String.valueOf(75),String.valueOf(25),String.valueOf(25)),
+				new regionLayout(String.valueOf(75),String.valueOf(0),String.valueOf(25))
+		});
+
+
+		dlgcsmilSupportRegionTable.put(9, new regionLayout[] {new regionLayout(String.valueOf(0),String.valueOf(0),String.valueOf(33.333)),
+				new regionLayout(String.valueOf(0),String.valueOf(33.333),String.valueOf(33.333)),
+				new regionLayout(String.valueOf(0),String.valueOf(66.666),String.valueOf(33.333)),
+				new regionLayout(String.valueOf(33.333),String.valueOf(0),String.valueOf(33.333)),
+				new regionLayout(String.valueOf(33.333),String.valueOf(33.333),String.valueOf(33.333)),
+				new regionLayout(String.valueOf(33.333),String.valueOf(66.666),String.valueOf(33.333)),
+				new regionLayout(String.valueOf(66.666),String.valueOf(0),String.valueOf(33.333)),
+				new regionLayout(String.valueOf(66.666),String.valueOf(33.333),String.valueOf(33.333)),
+				new regionLayout(String.valueOf(66.666),String.valueOf(66.666),String.valueOf(33.333))
+		});
+
+		dlgcsmilSupportRegionTable.put(10, new regionLayout[] {new regionLayout(String.valueOf(0),String.valueOf(0),String.valueOf(50)),
+				new regionLayout(String.valueOf(0),String.valueOf(50),String.valueOf(50)),
+				new regionLayout(String.valueOf(50),String.valueOf(0),String.valueOf(25)),
+				new regionLayout(String.valueOf(50),String.valueOf(25),String.valueOf(25)),
+				new regionLayout(String.valueOf(50),String.valueOf(50),String.valueOf(25)),
+				new regionLayout(String.valueOf(50),String.valueOf(75),String.valueOf(25)),
+				new regionLayout(String.valueOf(75),String.valueOf(0),String.valueOf(25)),
+				new regionLayout(String.valueOf(75),String.valueOf(25),String.valueOf(25)),
+				new regionLayout(String.valueOf(75),String.valueOf(50),String.valueOf(25)),
+				new regionLayout(String.valueOf(75),String.valueOf(75),String.valueOf(25))
+		});
+
+	
+	}	
+	private class DlgcConfVideoRendererListener  <T extends MediaEvent<?>> implements MediaEventListener<T>, Serializable {
+		
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+
+		/**
+		 * 
+		 */
+	
+
+		@Override
+		public void onEvent(T theEvent) {
+			log.info("Entering DlgcConfVideoRendererListener::onEvent");
+			log.info("DlgcConfVideoRendererListener::Type " + theEvent.getEventType() );
+			log.info("DlgcConfVideoRendererListener::Source " + theEvent.getSource().toString());
+			log.info("DlgcConfVideoRendererListener::ErrorText " + theEvent.getErrorText());				
+		}
+	}
+	
+	private class MixerAllocationEventListener implements AllocationEventListener, Serializable {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 17564463L;
+		private boolean m_bAllocationSuccessful;
+		private MediaMixer m_MediaMixer;
+
+		public MixerAllocationEventListener(MediaMixer mx){
+			m_bAllocationSuccessful = false;
+			m_MediaMixer= mx;
+		}
+		@Override
+		public void onEvent(AllocationEvent anEvent) {
+			// Check if mixer confirmation was successful
+			log.info(" MIXER ALLOCATION EVENT: "+anEvent.getEventType());
+		//	MediaMixer mx = (MediaMixer) anEvent.getSource();
+			
+			if (anEvent.getEventType().equals(AllocationEvent.ALLOCATION_CONFIRMED)) {
+					/*if (anEvent.isSuccessful())
+					{
+						log.info(" RECEIVED ALLOCATION CONFIRMED FOR CONFERENCE: ");
+						m_bAllocationSuccessful = true;
+					}
+					else
+					{
+						log.error("RECEIVED ALLOCATION CONFIRMED FOR CONFERENCE with error = "+anEvent.getErrorText());
+						m_bAllocationSuccessful = false;
+					}	*/
+				log.info(" RECEIVED ALLOCATION CONFIRMED FOR CONFERENCE: ");
+				m_bAllocationSuccessful = true;
+			}
+			else if (anEvent.getEventType().equals(AllocationEvent.IRRECOVERABLE_FAILURE)) {
+					log.error("Can't enter conference...IRRECOVERABLE_FAILURE ");
+					m_bAllocationSuccessful = false;
+			}
+			if (m_MediaMixer!= null)
+			{
+				try
+				{
+					synchronized(m_MediaMixer)
+					{
+						m_MediaMixer.notify();
+					}
+				}
+				catch(IllegalMonitorStateException e)
+				{
+					log.error("IllegalMonitorStateException error=" +e.getLocalizedMessage());
+				}
+			}
+		}
+		
+		public boolean isAllocationSuccessful()
+		{
+			return m_bAllocationSuccessful;
+		}
+
+		
+	}
+
+		
+	//SVN Add Active Input (ASN) To Mixer
+	private class ActiveTalkerListener implements MediaEventListener<MixerEvent>, Serializable {
+		
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public void onEvent(MixerEvent activeTalkerEvent ) {
+			log.info(" MIXER Active Talker EVENT: "+ activeTalkerEvent.getEventType());
+			
+			Joinable[] activeTalkerList =  activeTalkerEvent.getActiveInputs();
+			if ( activeTalkerList != null) {
+				NetworkConnection nc = null;
+				for( Joinable j : activeTalkerList ) {
+					nc = (NetworkConnection) j;
+					try {
+						String NCID = nc.toString();
+						String NCURI = nc.getURI().toString();
+						log.debug("DlgcConvergedConference::ActiveTalker NC: " +NCID);
+						log.debug("DlgcConvergedConference::ActiveTalker NC URI: " + NCURI); 
+					}catch ( Exception e) {
+						log.error(e.toString());
+					}
+					
+				}
+			}else {
+				log.debug("DlgcConvergedConference::ActiveTalkerListener:: receive Active Talker but got a Null Active Talker List");
+			}
+		}
+
+		
+	}
+	
+	private class ConfRegion{
+		public String Id;
+		public String top;
+		public String left;
+		public String relativeSize;
+		
+	    ConfRegion(String sTop, String sLeft, String sSize,String sId)
+		{
+			Id = sId;
+			top = sTop;
+			left = sLeft;
+			relativeSize = sSize;
+		}
+	}
+
+	private class LayoutSet{
+		public VideoLayout vl;
+		public Vector<ConfRegion> regionSet;
+		
+		public LayoutSet(){
+			vl = null;
+			regionSet = new Vector<ConfRegion>();
+		}
+	}
+	
+	
+	DlgcConference(String conf_name,MsControlFactory mscFactory ){
+		m_ConfName = conf_name;
+		m_MscFactory = mscFactory;
+		m_MediaMixer = null;
+		m_bVAS = false;
+		m_bControlLeg = false;
+		m_VideoRenderer = null;
+		
+		m_ParticipantLock = new ReentrantLock();
+		m_ParticipantMap=null;
+	}
+	
+	private DlgcClient addNextPantipantToVideo() {
+		DlgcClient participant = null;
+    	for (DlgcClient client : m_ParticipantMap) {
+    		 synchronized (client) {	
+    			if (!client.m_bVideo)
+    			{
+    				//log.info(" DlgcConferenceTest::Find next video partipant");
+    				client.m_bVideo=true;
+    				participant = client;
+    				break;
+    			}
+    		 }
+    	}
+    	return participant;
+	}
+	
+	
+	
+	protected boolean isScreenShareEabled()
+	{
+		boolean bRet = false;
+		for (DlgcClient client : m_ParticipantMap) {
+			 synchronized (client) {	
+				if (client.m_name.equalsIgnoreCase("screenshare"))
+				{
+					bRet = true;
+					break;
+				}
+			 }
+		}
+		return bRet;
+	}
+	
+	protected LayoutSet getVideoLayout()
+	{
+			LayoutSet layoutSet= null;
+			int pVSize = this.getVideoPanticipantSize();
+			
+			if (pVSize == 0 )
+				return layoutSet;
+			
+			layoutSet = new LayoutSet();
+			
+			regionLayout selRegionlayout[]=null;
+			DlgcsmilDocument doc = DlgcsmilDocument.Factory.newInstance();
+			
+			Dlgcsmil dlgcsmil = doc.addNewDlgcsmil();
+			Layout  layout = dlgcsmil.addNewHead().addNewLayout();
+			layout.setSize(m_ConfVideoSize);
+			Par par = dlgcsmil.addNewBody().addNewPar();
+			Integer i = 1;
+			if (m_bVAS)
+			{
+				selRegionlayout = dlgcsmilSupportRegionTable.get(8);	
+								
+				Region region =  layout.addNewRegion();
+				Ref ref = par.addNewRef();
+				Text text=par.addNewText();
+				region.setId("1");
+				ref.setSrc(VideoLayout.mostActiveStream.toString());
+				region.setLeft(selRegionlayout[0].left);
+				region.setTop(selRegionlayout[0].top);
+				region.setRelativesize(selRegionlayout[0].relativeSize);
+				ref.setRegion("1");
+				
+				text.setRegion("1");
+				text.setLeftPosition(50);
+				text.setTopPosition(0);
+				text.setHorizontalSize(40);
+				text.setVerticalSize(10);
+				text.setBackgroundOpacity(0);
+				text.setTextBackgroundOpacity(0);
+				text.setPriority((float) 0.4);
+				text.setText("Most Active Talker");
+				
+				
+				ConfRegion confRegion = new ConfRegion(selRegionlayout[0].top.toString(),
+																				  selRegionlayout[0].left.toString(),
+																				  selRegionlayout[0].relativeSize.toString(),
+																				  VideoLayout.mostActiveStream.toString());
+				layoutSet.regionSet.add(confRegion);
+				i++;
+			}
+			else
+			{
+				if (pVSize == 1)
+				{
+					selRegionlayout = dlgcsmilSupportRegionTable.get(1);
+					
+				}
+				else if (pVSize == 2)
+				{
+					selRegionlayout = dlgcsmilSupportRegionTable.get(2);
+					
+				}
+				else if (pVSize <5)
+				{
+					selRegionlayout = dlgcsmilSupportRegionTable.get(4);
+					
+				}
+				else if (pVSize < 7)
+				{
+					selRegionlayout = dlgcsmilSupportRegionTable.get(6);
+					
+				}
+				else if (pVSize < 9)
+				{
+					selRegionlayout = dlgcsmilSupportRegionTable.get(8);
+					
+				}
+				else if (pVSize >=9)
+				{
+					selRegionlayout = dlgcsmilSupportRegionTable.get(9);
+					
+				}
+			}
+			
+			if (isScreenShareEabled() && !m_bVAS)
+			{
+				
+				selRegionlayout = dlgcsmilSupportRegionTable.get(8);
+				
+				// Set Screenshare region
+				
+				NetworkConnection screenshareNc = null;
+				for (DlgcClient client : this.m_ParticipantMap) {
+					 synchronized (client) {	
+						if (client.m_name.equalsIgnoreCase("screenshare"))
+						{
+							screenshareNc = client.m_nc;
+							Region region =  layout.addNewRegion();
+							Ref ref = par.addNewRef();
+							//Text text=par.addNewText();
+							region.setId(i.toString());
+							region.setLeft(selRegionlayout[0].left);
+							region.setTop(selRegionlayout[0].top);
+							region.setRelativesize(selRegionlayout[0].relativeSize);
+							ref.setRegion(i.toString());						
+							ref.setSrc(client.m_nc.getURI().toString());
+							//text.setText(client.name);				
+							ConfRegion confRegion = new ConfRegion(selRegionlayout[0].top.toString(),
+																							selRegionlayout[0].left.toString(),
+																							selRegionlayout[0].relativeSize.toString(),
+																							client.m_nc.getURI().toString());	
+							layoutSet.regionSet.add(confRegion);
+							i++;
+							break;
+							
+						}
+					 }
+				}
+				for (DlgcClient client : m_ParticipantMap) {
+					 synchronized (client) {	
+						if (client.m_nc !=screenshareNc && client.m_bVideo)
+						{
+							Region region =  layout.addNewRegion();
+							Ref ref = par.addNewRef();
+							
+							region.setId(i.toString());
+							region.setLeft(selRegionlayout[i-1].left);
+							region.setTop(selRegionlayout[i-1].top);
+							region.setRelativesize(selRegionlayout[i-1].relativeSize);
+							ref.setRegion(i.toString());
+							ref.setSrc(client.m_nc.getURI().toString());
+							
+							Text text=par.addNewText();
+							text.setRegion(i.toString());
+							text.setLeftPosition(60);
+							text.setTopPosition(0);
+							text.setHorizontalSize(40);
+							text.setVerticalSize(10);
+							text.setBackgroundOpacity(0);
+							text.setTextBackgroundOpacity(0);
+							text.setPriority((float) 0.4);
+							text.setText(client.m_name);			
+							
+							
+							ConfRegion confRegion = new ConfRegion(selRegionlayout[i-1].top.toString(),
+																							selRegionlayout[i-1].left.toString(),
+																							selRegionlayout[i-1].relativeSize.toString(),
+																							client.m_nc.getURI().toString());
+							layoutSet.regionSet.add(confRegion);
+							i++;
+						}
+					 }
+					
+					 if (i>8)
+						 break;
+				}
+				
+				
+			}
+			else
+			{
+		        for (DlgcClient client : m_ParticipantMap) {
+					 synchronized (client) {	
+					if (client.m_bVideo)
+					{
+						Region region =  layout.addNewRegion();
+						Ref ref = par.addNewRef();
+						
+						region.setId(i.toString());
+						region.setLeft(selRegionlayout[i-1].left);
+						region.setTop(selRegionlayout[i-1].top);
+						region.setRelativesize(selRegionlayout[i-1].relativeSize);
+						ref.setRegion(i.toString());
+						ref.setSrc(client.m_nc.getURI().toString());
+						
+						Text text=par.addNewText();
+						text.setRegion(i.toString());
+						text.setLeftPosition(60);
+						text.setTopPosition(0);
+						text.setHorizontalSize(40);
+						text.setVerticalSize(10);
+						text.setBackgroundOpacity(0);
+						text.setTextBackgroundOpacity(0);
+						text.setPriority((float) 0.4);			
+						text.setText(client.m_name);	
+						
+						ConfRegion confRegion = new ConfRegion(selRegionlayout[i-1].top.toString(),
+																						selRegionlayout[i-1].left.toString(),
+																						selRegionlayout[i-1].relativeSize.toString(),
+																						client.m_nc.getURI().toString());
+						layoutSet.regionSet.add(confRegion);
+						i++;
+					 }
+					 
+					 if (m_bVAS)
+					 {
+						 if (i>8)
+							 break;
+					 }
+					 else
+					 {
+						 if (i>9)
+							 break;
+					 }
+			      }
+		        }
+			}
+		      
+			 log.info(doc.toString());
+
+			
+			InputStream is;
+			try {
+				is = new ByteArrayInputStream(doc.toString().getBytes("UTF-8"));
+				InputStreamReader in = new InputStreamReader(is, "UTF-8");
+				try {
+					layoutSet.vl = m_MscFactory.createVideoLayout(MSML_LAYOUT_MIME, in);
+				} catch (MediaConfigException e) {
+					e.printStackTrace();
+					log.error("Fail to create video layout :"+e.getMessage());
+					layoutSet= null;
+				}
+			} catch (IOException ioex) {
+				ioex.printStackTrace();
+				log.error("Fail to create video layout :"+ioex.getMessage());
+				layoutSet= null;
+			}
+			
+			return layoutSet;
+
+	}
+	    
+    protected int getVideoPanticipantSize()
+    {
+    	int size = 0;
+    	for (DlgcClient client : m_ParticipantMap) {
+    		 synchronized (client) {	
+    			if (client.m_bVideo)
+    				size++;
+    		 }
+    	}
+    	return size;
+    }
+    
+  
+    public synchronized boolean AddClient(DlgcClient client)
+    {
+    	m_ParticipantLock.lock();
+    	boolean bRet = true;
+    	
+    	/*String sdpContent =(String) client.m_ncMediaSession.getAttribute("SESSION_SDP");
+    	
+    	 //Use the static method of SdpFactory to parse the content
+		
+		 
+		 	    try {
+			SdpFactory sdpFactory = SdpFactory.getInstance();
+		    SessionDescription  sessionDescription= sdpFactory.createSessionDescription(sdpContent); 
+		    @SuppressWarnings("rawtypes")
+			Vector mediaVector = sessionDescription.getMediaDescriptions(false);
+			log.info("AddClient()  client mediaDescription size  "+mediaVector.size());
+			    
+		    boolean IsVideo=false, IsAudio=false;
+		    for (int i=0;i<mediaVector.size();i++)
+		    {
+		    	MediaDescription md = (MediaDescription) mediaVector.get(i);
+		        if (md.getMedia().getMediaType().equalsIgnoreCase("video"))
+		        	IsVideo = true;
+		        else if (md.getMedia().getMediaType().equalsIgnoreCase("audio"))
+		        	IsAudio = true;
+		    }*/
+	
+		    boolean IsVideo=true, IsAudio=true;
+			    
+			if (IsVideo)
+			{				
+				m_ParticipantMap.add(client);
+		    		    	
+				if ( m_VideoRenderer != null ) {
+					//log.debug("Found both videoLayout and VideoRender... setting Mixer video renderer layout...");
+					int vPSize = getVideoPanticipantSize();
+					LayoutSet layout=null;
+					 if ( m_bVAS)
+					 {
+						 if (vPSize<8)
+						 {
+							 client.m_bVideo=true;
+							 layout = getVideoLayout();
+						 }
+					 }
+					 else
+					 {
+						 if (vPSize<9)
+						 {
+							 client.m_bVideo=true;
+							 layout = getVideoLayout();
+						 }
+					 }
+					if (layout!=null)
+					{
+						try{
+							m_VideoRenderer.setLayout(layout.vl);
+						}catch (MsControlException e) {
+							// TODO Auto-generated catch block
+							// e.printStackTrace();
+							log.error("Fail to set layout " + e.getMessage());
+							bRet = false;
+							
+						}
+					}
+					if (bRet)
+					{
+						try
+						{
+							 if (client.m_bVideo)
+							 {
+								 m_MediaMixer.join(Joinable.Direction.DUPLEX,client.m_nc);
+								 if (layout!=null)
+							    {
+									 String layoutMsg = createLayoutChangeMsg(layout);
+									 if (layoutMsg!=null)
+										 boardcastMsg( layoutMsg);
+							    }
+							 }
+							 else
+							 {
+								 if (m_bVAS)
+									 m_MediaMixer.join(Joinable.Direction.DUPLEX,client.m_nc);
+								 else
+									 client.m_nc.join(Joinable.Direction.RECV, m_MediaMixer);
+								 LayoutSet curLayout= getVideoLayout();
+								 String curLayoutMsg = createLayoutChangeMsg(curLayout);
+								 try{
+									 if (client.m_connectionType.equalsIgnoreCase("WEBSOCKET_SESSION"))
+				                	  {
+				                		  client.m_webSession.getBasicRemote().sendText(curLayoutMsg); 
+				                	  }
+									
+								 } catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								} 
+							 }
+						}catch (MsControlException e) {
+							// TODO Auto-generated catch block
+							// e.printStackTrace();
+							log.error("Fail to Join the conference " + e.getMessage());
+							bRet = false;
+							
+						}
+					}
+				}
+			}
+			else if (IsAudio)
+			{
+				m_ParticipantMap.add(client);
+				try{
+					client.m_nc.getJoinableStream(StreamType.audio).join(Joinable.Direction.DUPLEX, m_MediaMixer);
+				}catch (MsControlException e) {
+					// TODO Auto-generated catch block
+					// e.printStackTrace();
+					log.error("Fail to Join the conference " + e.getMessage());
+					bRet = false;
+					
+				}
+			}
+			else
+			{
+				log.error("AddParticipant()  sdp does not either audio or video media" );
+				bRet = false;
+			}
+					
+	/*	} catch (SdpParseException e1) {
+			// TODO Auto-generated catch block
+			log.error("Invalid SDP for client =  "+client.m_name );
+			e1.printStackTrace();
+			bRet = false;
+		} catch (SdpException e) {
+			// TODO Auto-generated catch block
+			log.error("Invalid SDP for client =  "+client.m_name );
+			e.printStackTrace();
+			bRet = false;
+		}*/
+		    
+	if (bRet == false)
+		m_ParticipantMap.remove(client);
+	else
+	{
+		 String msg = createConfChangeMsg();
+	     if (msg!=null)
+	    	 boardcastMsg(msg);
+	}
+
+	m_ParticipantLock.unlock();
+    return bRet;
+}
+    
+    public synchronized void RemoveClient(DlgcClient p)
+    {
+     	m_ParticipantMap.remove(p);
+    	
+		if ( m_VideoRenderer!= null ) {
+			
+			 LayoutSet layout = null;
+			 DlgcClient vP = null;
+			 if (p.m_bVideo)
+			 {
+				 vP = addNextPantipantToVideo();
+				 layout =getVideoLayout();	
+			 }
+			if (layout != null)
+			{	
+				try {
+					
+					m_VideoRenderer.setLayout(layout.vl);
+					 if (vP !=null)
+					 {
+						 log.info(" DlgcConferenceTest::Get next video partipant");
+						 m_MediaMixer.unjoin(vP.m_nc); 
+						 m_MediaMixer.join(Joinable.Direction.DUPLEX,vP.m_nc);
+					 }
+					
+					String layoutMsg = createLayoutChangeMsg(layout);
+					if (layoutMsg!=null)
+						boardcastMsg(layoutMsg);
+					
+				} catch (MsControlException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		 String msg = createConfChangeMsg();
+	     if (msg!=null)
+	    	 boardcastMsg(msg);
+    }
+	
+	public boolean CreateConference(String mixMode,String mixerSize,Parameters params,boolean bVAS,boolean bControlLeg)
+	{
+		boolean bRet = true;
+		if (m_MediaMixer==null){
+			try {
+				m_bVAS = bVAS;
+				m_bControlLeg = bControlLeg;
+				MediaSession ms = m_MscFactory.createMediaSession();
+				if (m_bVAS == false)
+					ms.setAttribute("connector.asn.louder.sample.time", new Integer(5) );		
+				
+				
+				log.info("****************CreateMediaMixer = "+m_ConfName+"***************************");
+				
+				if (mixerSize == null)
+					mixerSize ="VGA";
+				else
+				{
+					m_ConfVideoSize =Layout.Size.Enum.forString(mixerSize);
+				}
+				if (mixMode == null)
+					mixMode ="AUDIO_VIDEO";
+				ms.setAttribute("CONFERENCE_VIDEO_SIZE", mixerSize);
+				if (mixMode.equalsIgnoreCase("AUDIO_VIDEO_RENDERING"))
+				{
+					m_MediaMixer = ms.createMediaMixer(MediaMixer.AUDIO_VIDEO_RENDERING, params);
+					
+					m_VideoRenderer  = m_MediaMixer.getResource(VideoRenderer.class);
+					 if ( m_VideoRenderer == null ) {
+							log.error("Sorry the mixer has returned a null for the VideoRenderer.. can't apply video layout...");
+					 } else {
+							log.info ("Found both videoLayout and VideoRender... setting Mixer video renderer layout...");
+					
+							DlgcConfVideoRendererListener<VideoRendererEvent> VRL= new DlgcConfVideoRendererListener<VideoRendererEvent>()		;
+							m_VideoRenderer.addListener(VRL);
+					 }
+				}
+				else  if (mixMode.equalsIgnoreCase("AUDIO_VIDEO"))
+					m_MediaMixer = ms.createMediaMixer(MediaMixer.AUDIO_VIDEO, params);
+				else
+					m_MediaMixer = ms.createMediaMixer(MediaMixer.AUDIO, params);
+				
+				m_ParticipantMap = new CopyOnWriteArraySet<DlgcClient>();
+				
+				MixerAllocationEventListener mxAllocationEventListener = new MixerAllocationEventListener(m_MediaMixer);
+				m_MediaMixer.addListener(mxAllocationEventListener);
+				
+				MediaEventListener<MixerEvent> activeTalkerListener = new ActiveTalkerListener();
+				m_MediaMixer.addListener(activeTalkerListener);
+				
+				if ( m_bControlLeg)
+				{
+					synchronized(m_MediaMixer)
+					{
+						m_MediaMixer.confirm();
+						try {
+							m_MediaMixer.wait(5000);
+							bRet = mxAllocationEventListener.isAllocationSuccessful();
+							
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							log.error(e.getLocalizedMessage());
+							bRet = false;
+						}
+					}
+				}
+				
+			
+				
+			}catch (MsControlException e) {
+				log.error(e.getLocalizedMessage());
+				bRet = false;
+			}
+		}
+		
+		if (bRet==false)
+		{
+			if (m_MediaMixer!=null)
+			{
+				m_MediaMixer.getMediaSession().release();
+				m_MediaMixer = null;
+			}
+		}
+			
+			
+		return bRet;
+	}
+	
+	@SuppressWarnings("unchecked")
+	protected String createLayoutChangeMsg(LayoutSet layoutSet)
+	{
+		 String layout=null;
+
+		if (layoutSet!=null)
+		{
+			JSONObject obj = new JSONObject();
+			 obj.put("type", "layout");
+			 JSONArray list = new JSONArray();
+			for(int i =0;i<layoutSet.regionSet.size(); i++)
+			{
+				JSONObject regionObj = new JSONObject();
+		    	 regionObj.put("top",layoutSet.regionSet.get(i).top);
+		    	 regionObj.put("left",layoutSet.regionSet.get(i).left);
+		    	 regionObj.put("size",layoutSet.regionSet.get(i).relativeSize);
+		    	 regionObj.put("id", layoutSet.regionSet.get(i).Id);
+		    	 list.add(regionObj);
+			}
+			
+			obj.put("regions",list);
+			layout =obj.toJSONString();
+			log.info("Entering  createLayoutChangeMsg: " + layout);
+		}
+		
+		
+		return layout;
+	}
+	 
+	 @SuppressWarnings("unchecked")
+	protected String createConfChangeMsg()
+	 {
+	     if (m_ParticipantMap.size()==0)
+	    	 return null;
+	    
+	     JSONObject obj = new JSONObject();
+		 obj.put("type", "conf");
+		 JSONArray list = new JSONArray();
+		
+		 for (DlgcClient client : m_ParticipantMap) {
+			
+	                  synchronized (client) {      
+	                	  JSONObject p = new JSONObject();
+	     		    	  p.put("name",client.m_name);
+	     		    	  p.put("session_type",client.m_connectionType);
+	                	  list.add(p);
+	 	              }
+		 }
+	     
+	     obj.put("parties", list);
+	     
+	    return obj.toJSONString();
+	 }
+	 
+	 protected void boardcastMsg(String msg)
+	 {
+		if (msg ==null)
+			return;
+		 for (DlgcClient client : m_ParticipantMap) {
+			 try {
+	                  synchronized (client) {      
+	                	  if (client.m_connectionType.equalsIgnoreCase("WEBSOCKET_SESSION"))
+	                	     client.m_webSession.getBasicRemote().sendText(msg); 
+	 	              }
+			 }
+			catch ( IllegalStateException e)
+			{
+				 log.error("Chat Error: Failed to send message to client: "+e.getMessage());
+			}
+	         catch (IOException e) {
+	                log.error("Chat Error: Failed to send message to client: "+e.getMessage());
+	               
+	        }
+			 catch (Exception e)
+			 {
+				  log.error("Chat Error: Failed to send message to client: "+e.getMessage());
+			 }
+		 }
+
+	 }
+	 
+	 
+	 public synchronized int  GetPanticipantSize() {
+			// TODO Auto-generated method stub
+		 return m_ParticipantMap.size();
+		}
+	 
+	 public synchronized void Release() {
+		// TODO Auto-generated method stub
+		 for (DlgcClient client : m_ParticipantMap) {
+				
+             synchronized (client)
+             {      
+            	 if (client.m_clientType.equalsIgnoreCase("translator"))
+            		 client.sendBye();
+             }
+		 }
+		 m_MediaMixer.getMediaSession().release();
+	}
+
+	/**
+	 * 
+	 */
+	private Layout.Size.Enum m_ConfVideoSize;
+	private MediaMixer m_MediaMixer;
+	private String m_ConfName;
+	private MsControlFactory m_MscFactory;
+	private boolean m_bVAS;
+	private boolean m_bControlLeg;
+	private VideoRenderer m_VideoRenderer;
+	private static Logger log = LoggerFactory.getLogger(DlgcConference.class);
+	private Lock m_ParticipantLock;
+	static public final String MSML_LAYOUT_MIME = "application/dlgcsmil+xml";
+	//private CopyOnWriteArraySet<DlgcParticipant> m_ParticipantMap;
+	private CopyOnWriteArraySet<DlgcClient> m_ParticipantMap;
+	
+
+	
+
+	
+
+}

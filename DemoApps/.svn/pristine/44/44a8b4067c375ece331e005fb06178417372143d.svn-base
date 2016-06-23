@@ -1,0 +1,784 @@
+/*
+ * DIALOGIC CONFIDENTIAL
+ *
+ * Copyright 2010 Dialogic Corporation. All Rights Reserved.
+ * The source code contained or described herein and all documents related to
+ * the source code (collectively "Material") are owned by Dialogic Corporation 
+ * or its suppliers or licensors ("Dialogic"). 
+ *
+ * BY DOWNLOADING, ACCESSING, INSTALLING, OR USING THE MATERIAL YOU AGREE TO BE
+ * BOUND BY THE TERMS AND CONDITIONS DENOTED HERE AND ANY ADDITIONAL TERMS AND
+ * CONDITIONS SET FORTH IN THE MATERIAL. Title to the Material remains with 
+ * Dialogic. The Material contains trade secrets and proprietary and 
+ * confidential information of Dialogic. The Material is protected by worldwide
+ * Dialogic copyright(s) and applicable trade secret laws and treaty provisions.
+ * No part of the Material may be used, copied, reproduced, modified, published, 
+ * uploaded, posted, transmitted, distributed, or disclosed in any way without
+ * prior express written permission from Dialogic Corporation.
+ *
+ * No license under any applicable patent, copyright, trade secret or other 
+ *intellectual property right is granted to or conferred upon you by disclosure
+ * or delivery of the Material, either expressly, by implication, inducement, 
+ * estoppel or otherwise. Any license under any such applicable patent, 
+ * copyright, trade secret or other intellectual property rights must be express
+ * and approved by Dialogic Corporation in writing.
+ *
+ * You understand and acknowledge that the Material is provided on an 
+ * AS-IS basis, without warranty of any kind.  DIALOGIC DOES NOT WARRANT THAT 
+ * THE MATERIAL WILL MEET YOUR REQUIREMENTS OR THAT THE SOURCE CODE WILL RUN 
+ * ERROR-FREE OR UNINTERRUPTED.  DIALOGIC MAKES NO WARRANTIES, EXPRESS OR 
+ * IMPLIED, INCLUDING, WITHOUT LIMITATION, ANY WARRANTY OF NON-INFRINGEMENT, 
+ * MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  DIALOGIC ASSUMES NO 
+ * RISK OF ANY AND ALL DAMAGE OR LOSS FROM USE OR INABILITY TO USE THE MATERIAL. 
+ * THE ENTIRE RISK OF THE QUALITY AND PERFORMANCE OF THE MATERIAL IS WITH YOU.  
+ * IF YOU RECEIVE ANY WARRANTIES REGARDING THE MATERIAL, THOSE WARRANTIES DO NOT 
+ * ORIGINATE FROM, AND ARE NOT BINDING ON DIALOGIC.
+ *
+ * IN NO EVENT SHALL DIALOGIC OR ITS OFFICERS, EMPLOYEES, DIRECTORS, 
+ * SUBSIDIARIES, REPRESENTATIVES, AFFILIATES AND AGENTS HAVE ANY LIABILITY TO YOU 
+ * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR 
+ * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT, 
+ * SPECIAL OR CONSEQUENTIAL DAMAGES RELATING TO THE MATERIAL, UNDER ANY CAUSE OF
+ * ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER DIALOGIC OR ITS 
+ * OFFICERS, EMPLOYEES, DIRECTORS, SUBSIDIARIES, REPRESENTATIVES, AFFILIATES AND 
+ * AGENTS HAVE ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES.  THESE 
+ * LIMITATIONS SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE 
+ * OF ANY LIMITED REMEDY.  IN ANY CASE, DIALOGIC'S AND ITS OFFICERS', 
+ * EMPLOYEES', DIRECTORS', SUBSIDIARIES', REPRESENTATIVES', AFFILIATES' AND 
+ * AGENTS' ENTIRE LIABILITY RELATING TO THE MATERIAL SHALL NOT EXCEED THE 
+ * AMOUNTS OF THE FEES THAT YOU PAID FOR THE MATERIAL (IF ANY). THE MATERIALE 
+ * IS NOT FAULT-TOLERANT AND IS NOT DESIGNED, INTENDED, OR AUTHORIZED FOR USE IN 
+ * ANY MEDICAL, LIFE SAVING OR LIFE SUSTAINING SYSTEMS, OR FOR ANY OTHER 
+ * APPLICATION IN WHICH THE FAILURE OF THE MATERIAL COULD CREATE A SITUATION 
+ * WHERE PERSONAL INJURY OR DEATH MAY OCCUR. Should You or Your direct or 
+ * indirect customers use the MATERIAL for any such unintended or unauthorized 
+ * use, You shall indemnify and hold Dialogic and its officers, employees, 
+ * directors, subsidiaries, representatives, affiliates and agents harmless 
+ * against all claims, costs, damages, and expenses, and attorney fees and 
+ * expenses arising out of, directly or indirectly, any claim of product 
+ * liability, personal injury or death associated with such unintended or 
+ * unauthorized use, even if such claim alleges that Dialogic was negligent 
+ * regarding the design or manufacture of the part.
+ */
+/*testing */
+package web_converged_demo.clicktocall;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import javax.media.mscontrol.Parameters;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.sip.Address;
+import javax.servlet.sip.SipApplicationSession;
+import javax.servlet.sip.SipFactory;
+import javax.servlet.sip.SipServlet;
+import javax.servlet.sip.SipServletContextEvent;
+import javax.servlet.sip.SipServletRequest;
+import javax.servlet.sip.SipServletResponse;
+import javax.servlet.sip.SipSession;
+import javax.servlet.sip.SipSessionsUtil;
+import javax.servlet.sip.SipURI;
+import javax.websocket.OnClose;
+import javax.websocket.OnError;
+import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
+import javax.websocket.PongMessage;
+import javax.websocket.Session;
+import javax.websocket.server.PathParam;
+import javax.websocket.server.ServerEndpoint;
+
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
+enum CLIENT_STATE {INIT,IVR,CONF,FAILED}
+
+@ServerEndpoint("/dialogic/outbound/{role}/{user-id}") 
+
+
+
+public class DlgcConvergedOutboundDemo extends DlgcBaseDemo
+{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1;
+	protected Boolean confServletInitCalled = false;
+	Boolean webRTCInitialized=false;
+	
+	@Override
+	public void init(ServletConfig cfg) throws ServletException
+	{
+		super.init(cfg);
+		sessionsUtil = (SipSessionsUtil) getServletContext().getAttribute(SIP_SESSIONS_UTIL);
+	}
+	
+	@Override
+	public void servletInitialized(SipServletContextEvent evt){
+
+		String sName = evt.getSipServlet().getServletName();
+		
+		if( sName.equalsIgnoreCase("DlgcSipServlet") )
+		{
+			dlgcSipServletLoaded = true;
+			log.info(" DlgcConvergedOutboundDemo::servletInitialized DlgcSipServlet loaded");			
+		}
+
+		if( dlgcSipServletLoaded)
+		{
+			if ( servletInitializedFlag == false ) {
+				log.info("Entering DlgcConvergedOutboundDemo::servletInitialized servletName: " + sName);			
+				servletInitializedFlag = true;
+				initDriver();
+				mySAs = sessionsUtil.getApplicationSessionByKey("DIALOGIC_OUTBOUND_DEMO", true);
+				DlgcClientRegistry translatorReg =  new DlgcClientRegistry();
+				DlgcClientRegistry doctorReg =  new DlgcClientRegistry();
+				
+				mySAs.setAttribute("TRANSLATOR_REGISTRY", translatorReg);
+				mySAs.setAttribute("DOCTOR_REGISTRY", doctorReg);
+				mySAs.setAttribute("APP_SERVLET", this);
+				
+				emApplicationIpAddrStr = demoPropertyObj.getProperty(applicationSipAddressPropertyId);
+				if ( emApplicationIpAddrStr == null ) {
+					String msg = "Iinvalid Application IP Address - please enter this property in the property file";
+					log.error(msg);
+					return;
+					//throw ( new MsControlException(msg) );
+				}
+
+				String appPort = demoPropertyObj.getProperty(applicationSipPortPropertyId);
+				if ( appPort == null) {
+					String msg = "Invalid Application Port value - please enter this property in the property file";
+					log.error(msg);
+					//throw ( new MsControlException(msg) );
+				} else 
+					emApplicationPortInt = Integer.valueOf(appPort);	
+				
+				String mxMode = demoPropertyObj.getProperty("media.mixer.mode");
+				String confVideoSize = demoPropertyObj.getProperty("media.mixer.video.size");
+				String activeTalker = demoPropertyObj.getProperty("media.mixer.video.vas");
+				String controlLeg = demoPropertyObj.getProperty("media.mixer.video.controlleg");
+				if (mxMode==null)
+					mxMode="AUDIO_VIDEO";
+				if (confVideoSize==null)
+					confVideoSize="VGA";
+				boolean bVAS=false;
+				boolean bControlLeg =false;
+				if (controlLeg !=null && controlLeg.equalsIgnoreCase("yes"))
+					bControlLeg = true;
+				if (activeTalker !=null && activeTalker.equalsIgnoreCase("yes"))
+					bVAS = true;
+				mySAs.setAttribute("MIXER_MODE", mxMode);
+				mySAs.setAttribute("MIXER_VIDEO_SIZE", confVideoSize);
+				mySAs.setAttribute("MIXER_VIDEO_VAS", bVAS);
+				mySAs.setAttribute("MIXER_VIDEO_CONTROL_LEG", bControlLeg);
+				
+				confLock = new ReentrantLock();
+				
+				
+				/* for outboud call */
+				
+				sip289factory = (SipFactory)getServletContext().getAttribute(SipServlet.SIP_FACTORY);
+				appSipSession = DlgcConvergedOutboundDemo.sip289factory.createApplicationSession();
+				sasSipId = appSipSession.getId();
+				sipServletHandler = this.getServletName();
+
+			} else {
+				log.info("DlgcConvergedOutboundDemo::servletInitialized(): already servletInitialized was called...debouncing " + sName);
+			}
+		}
+	}
+	
+	
+	@Override
+	public void doInvite(final SipServletRequest request)
+	{
+		try
+		{
+			log.debug("^^^^^^^^^^^^^^^^^ DlgcConvergedOutboundDemo::doInvite()  ^^^^^^^^^^^^^^^^^^^^^");
+			
+			SipSession session = request.getSession();
+			
+			DlgcClient client = null;
+			client = (DlgcClient)session.getAttribute("Client_OBJ");
+			
+			if (client == null)
+			{
+				session.setAttribute("REQUEST", request);
+				SipURI sipURI= (SipURI)request.getRequestURI();
+										
+			    DlgcClientRegistry translatorReg = (DlgcClientRegistry)mySAs.getAttribute("TRANSLATOR_REGISTRY");
+			    DlgcClientRegistry doctorReg = (DlgcClientRegistry)mySAs.getAttribute("DOCTOR_REGISTRY");	
+				
+			    String userName = ( (SipURI)request.getFrom().getURI()).getUser();
+				if (userName==null)
+					userName = request.getFrom().getDisplayName();
+				if (userName==null)
+					userName="unknown";
+				
+				log.info("doInvite() request user "+sipURI.getUser());
+				
+				String tmp[] = sipURI.getUser().split("=");
+				
+				String invitee=null;
+				if (tmp.length > 1)
+					invitee = tmp[1];
+				
+				if (invitee == null)
+				{
+					SipServletResponse response = request.createResponse(SipServletResponse.SC_BAD_REQUEST);
+					log.error("doInvite() request missing invitee ");
+					try {
+						response.send();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}		
+					return;
+				}
+				
+				DlgcClient translator = translatorReg.FindAvailableRegister();
+				if (translator==null)
+				{
+					SipServletResponse response = request.createResponse(SipServletResponse.SC_NOT_FOUND);
+					//log.error("doInvite() request invitee "+invitee+" is not a register user");
+					log.error("doInvite() not available translator ");
+					try {
+						response.send();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}		
+					return;
+				}
+				
+			    
+	            client = new DlgcClient(userName,"doctor","SIP_SESSION",null,null,session,this.mscFactory,translatorReg,this);
+	            session.setAttribute("CLIENT_OBJ", client);      
+	            doctorReg.Register(client);
+	          
+	            byte[] remoteSdp = request.getRawContent();
+	            
+				
+	            String msg;
+	            JSONObject obj = new JSONObject();
+				obj.put("type", "offer");
+				String s1 = new String(remoteSdp);
+				obj.put("sdp", s1);
+				obj.put("invitee",translator.m_URI);
+				msg = obj.toJSONString();	            
+	            client.ProcessRequest(msg);
+				
+			}
+			else // reinvite
+			{
+				/*client.m_sipSession.getAttribute("SIP_SESSION");
+				//if (session.getAttribute("REINVITE")!=null)
+				{
+					if (nc!=null)
+					{
+						SipServletResponse response = request.createResponse(SipServletResponse.SC_OK);
+						try
+						{
+								response.setContent(nc.getSdpPortManager().getMediaServerSessionDescription(), "application/sdp");
+								response.send();
+								log.info("DlgcConvergedConference get reinvite sdp -- send same sdp back IIIII");
+								return;
+						}
+						catch (SdpPortManagerException e)
+						{
+							e.printStackTrace();
+						}					
+					}
+				}
+				session.setAttribute("REINVITE", "YES");*/
+			
+			}
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+	}
+	
+	
+	
+	@Override
+	protected void doResponse(SipServletResponse response)
+		throws ServletException, IOException
+	{
+		log.info("DlgcConvergedOutboundDemon doResponse() IIIII");
+		log.info("DlgcConvergedOutboundDemon doResponse() Method = "+ response.getMethod());
+		if (response.getMethod().equals("INVITE"))
+		{
+			log.info("DlgcConvergedOutboundDemon doResponse() status = "+ response.getStatus());
+			if (response.getStatus() == SipServletResponse.SC_OK)
+			{
+				DlgcClient client = null;
+				try
+				{
+					client = (DlgcClient) response.getRequest().getSession().getAttribute("CLIENT_OBJ");
+					byte[] remoteSdp = response.getRawContent();
+					if ( client !=null)
+					{
+						log.info("DlgcConvergedOutboundDemon doResponse() SetAnswerSdp ");
+						client.SetAnswerSdp(remoteSdp);
+						//response.createAck().send();	
+						 response.getRequest().getSession().setAttribute("RESPONSE", response);
+						synchronized (client){
+							client.notify();
+						}
+					}
+					
+				}
+				catch (IOException e)
+				{
+					e.printStackTrace();
+				}
+				
+			}
+		}
+		else
+		{
+			log.info("DlgcConvergedOutboundDemon doResponse() IIIII");
+		//	response.createAck().send();	
+		}
+			
+	}
+	
+	@Override
+	public void doRegister( SipServletRequest req)
+	throws ServletException, IOException
+	{
+		log.info("DlgcConvergedOutboundDemon get Register request IIIII");
+		DlgcClientRegistry translatorReg = (DlgcClientRegistry)mySAs.getAttribute("TRANSLATOR_REGISTRY");
+        DlgcClientRegistry doctorReg = (DlgcClientRegistry)mySAs.getAttribute("DOCTOR_REGISTRY");
+        
+        SipSession session = req.getSession();
+	
+        // Get the contact address from the request.  Prefer the
+	    // "Contact" address if given, otherwise use the "To" address
+	    Address addr =  req.getTo(); 
+	    String userName = ( (SipURI)req.getFrom().getURI()).getUser();		
+		if (userName==null)
+			userName = req.getFrom().getDisplayName();
+		if (userName==null)
+			userName="unknown";
+		String contact = req.getHeader("Contact");
+		if (contact != null) 
+			addr =sip289factory.createAddress(contact);
+		
+		log.info(" DlgcConvergedOutboundDemon Translator addess : "+addr.getURI().toString());
+		
+		int expires = 0;
+		String expStr = req.getHeader("Expires");
+        if (expStr != null) {
+            expires = Integer.parseInt(expStr);
+        }
+        DlgcClient client = null;
+        
+        if (expires == 0) {
+        	// unregister the client
+        	  client =translatorReg.FindRegister(addr.getURI().toString());
+        	 if (client !=null)
+        	 {
+        		 translatorReg.UnRegister(client);
+        	 }
+        	 else
+        	 {
+        		 req.createResponse(SipServletResponse.SC_BAD_REQUEST).send();
+        		 log.info(" DlgcConvergedOutboundDemon: is not a register users : "+addr.getURI().toString());
+        		 return;
+        	 }
+        }
+        else
+        {
+        	 client = new DlgcClient(userName,"translator","SIP_SESSION",addr,null, session,this.mscFactory,translatorReg,this);
+             session.setAttribute("CLIENT_OBJ", client);            
+             translatorReg.Register(client);
+        }
+        
+        try {             
+           
+             String msg = createRegisterUsersMsg(translatorReg); 
+           	 this.broadcastMsg(doctorReg, msg);
+               	  
+              req.createResponse(SipServletResponse.SC_OK).send();
+       }
+       catch ( IllegalStateException e)
+		{
+			 log.error(" Failed to send message to client: "+e.getMessage());
+		}
+		catch (Exception e)
+		{
+			  log.error("Failed to send message to client: "+e.getMessage());
+		}
+	    
+
+	 }
+	
+	
+	
+	@Override
+	public void doBye(final SipServletRequest req)
+	throws ServletException, IOException
+	{		
+		log.info("DlgcConvergedOutboundDemon doBye() IIIII");
+		DlgcClient client =  (DlgcClient) req.getSession().getAttribute("CLIENT_OBJ");
+		
+		if (client !=null)
+			client.Release();
+			
+		req.createResponse(SipServletResponse.SC_OK).send();
+		releaseSession(req.getSession());
+	}
+	
+	
+	protected DlgcConference createConference(String conf_room)
+	{
+		DlgcConference conf=null;
+	
+	    conf= new DlgcConference(conf_room,this.mscFactory);					
+		log.info("****************CreateMediaMixer = "+conf_room+"***************************");
+		String mxMode = (String)mySAs.getAttribute("MIXER_MODE");
+		String confSize = (String)mySAs.getAttribute("MIXER_VIDEO_SIZE");
+		Boolean bActiveTalker = (Boolean)mySAs.getAttribute("MIXER_VIDEO_VAS");
+		Boolean bControlLeg = (Boolean)mySAs.getAttribute("MIXER_VIDEO_CONTROL_LEG");
+		
+		if (bActiveTalker == null)
+			bActiveTalker = false;
+		if (bControlLeg == null)
+			bControlLeg = false;
+		if (confSize == null)
+			confSize ="VGA";
+		if (mxMode == null)
+			mxMode ="AUDIO_VIDEO";
+			
+		Parameters params = mscFactory.createParameters();
+						
+		if (bActiveTalker == false)
+		{
+			//ms.setAttribute("connector.asn.louder.sample.time", new Integer(5) );		
+			//SVN Add Active Input (ASN) To Mixer
+			/*params.put(MediaMixer.ENABLED_EVENTS, MixerEvent.ACTIVE_INPUTS_CHANGED );	   //enable active talker event
+			params.put(MediaMixer.MAX_ACTIVE_INPUTS, 4);*/
+		}
+
+	
+	    if (!conf.CreateConference(mxMode, confSize, params,bActiveTalker,bControlLeg))
+	    	conf = null;
+		return conf;
+	}
+	
+	@SuppressWarnings("unchecked")
+	protected DlgcConference getConference(String conf_room)
+	{
+		confLock.lock();
+		DlgcConference confMx=null;
+		Map<String,DlgcConference> confMap= (Map<String,DlgcConference>)mySAs.getAttribute("CONFERENCE_MAP");
+		confMx =confMap.get(conf_room);
+		if (confMx == null)
+		{
+			   confMx= new DlgcConference(conf_room,this.mscFactory);					
+				log.info("****************CreateMediaMixer = "+conf_room+"***************************");
+				String mxMode = (String)mySAs.getAttribute("MIXER_MODE");
+				String confSize = (String)mySAs.getAttribute("MIXER_VIDEO_SIZE");
+				Boolean bActiveTalker = (Boolean)mySAs.getAttribute("MIXER_VIDEO_VAS");
+				Boolean bControlLeg = (Boolean)mySAs.getAttribute("MIXER_VIDEO_CONTROL_LEG");
+				
+				if (bActiveTalker == null)
+					bActiveTalker = false;
+				if (bControlLeg == null)
+					bControlLeg = false;
+				if (confSize == null)
+					confSize ="VGA";
+				if (mxMode == null)
+					mxMode ="AUDIO_VIDEO";
+					
+				Parameters params = mscFactory.createParameters();
+								
+				if (bActiveTalker == false)
+				{
+					//ms.setAttribute("connector.asn.louder.sample.time", new Integer(5) );		
+					//SVN Add Active Input (ASN) To Mixer
+					/*params.put(MediaMixer.ENABLED_EVENTS, MixerEvent.ACTIVE_INPUTS_CHANGED );	   //enable active talker event
+					params.put(MediaMixer.MAX_ACTIVE_INPUTS, 4);*/
+				}
+
+			
+			    if (confMx.CreateConference(mxMode, confSize, params,bActiveTalker,bControlLeg))
+			    	confMap.put(conf_room, confMx);
+			    else
+			    	confMx = null;
+		}
+		confLock.unlock();
+		return confMx;
+	}
+	
+	
+	
+	 
+	 
+	 protected void myWebRTCInitialized()
+	 {
+		 mySAs=sessionsUtil.getApplicationSessionByKey("DIALOGIC_OUTBOUND_DEMO",false);
+		// DlgcConvergedOutboundDemo servlet
+	 }
+	 
+	
+	 
+	 @OnMessage
+	 public void onTextMessage(@PathParam("guest-id") String guestID, Session session, String msg) 
+	 {
+         log.info("DlgcConvergedOutboundDemo::TextMessage: " + msg+" session Id =" + session.getId()+" Guest-id = "+guestID);
+         DlgcClient client = (DlgcClient ) session.getUserProperties().get("CLIENT_OBJ");
+        
+         if (client == null)
+         {
+        	 try {
+					session.getBasicRemote().sendText("{\"type\":\"error\", \"description\" : \"Invalid user\"}");
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+         }
+         else
+        	 client.ProcessRequest(msg);
+	 }
+
+	    @OnMessage
+	    public void onBinaryMessage(Session session, ByteBuffer bb,
+	            boolean last) {
+	        try {
+	            if (session.isOpen()) {
+	                session.getBasicRemote().sendBinary(bb, last);
+	            }
+	        } catch (IOException e) {
+	            try {
+	                session.close();
+	            } catch (IOException e1) {
+	                // Ignore
+	            }
+	        }
+	    }
+
+	    /**
+	     * Process a received pong. This is a NO-OP.
+	     *
+	     * @param pm    Ignored.
+	     */
+	    @OnMessage
+	    public void onPongMessage(PongMessage pm) {
+	        // NO-OP
+	    }
+	    
+	   
+	    
+	    @OnOpen
+	    public void onOpen(Session session, @PathParam("role") String role,@PathParam("user-id") String userId)
+	    {
+	    	 log.info("DlgcConvergedOutboundDemo::OnOpen: session Id =" + session.getId()+" role = "+role +" user-id = "+userId);
+	    	 try {
+	             
+	                  session.getBasicRemote().sendText("{\"type\":\"success\",  \"description\" : \"Connection open\"}");
+	                 
+	                  if (webRTCInitialized==false)
+	                  {
+	                	  log.info("DlgcConvergedOutboundDemo::onOpen: webrtc ini is false  Id =" + session.getId());
+		                  initDriver();
+						  myWebRTCInitialized();
+						  webRTCInitialized=true;  
+	                  }
+	                
+	                  DlgcClientRegistry translatorReg = (DlgcClientRegistry)mySAs.getAttribute("TRANSLATOR_REGISTRY");
+	                  DlgcClientRegistry doctorReg = (DlgcClientRegistry)mySAs.getAttribute("DOCTOR_REGISTRY");
+	                  DlgcConvergedOutboundDemo s= (DlgcConvergedOutboundDemo)mySAs.getAttribute("APP_SERVLET");
+	                  DlgcClient client = new DlgcClient(userId,role,"WEBSOCKET_SESSION",null,session, null,this.mscFactory,translatorReg,s);
+	                  session.getUserProperties().put("CLIENT_OBJ", client);      
+	                  String msg = createRegisterUsersMsg(translatorReg); 
+	                  if (role.equalsIgnoreCase("translator"))
+	                  {
+	                	  translatorReg.Register(client);
+	                	  msg = createRegisterUsersMsg(translatorReg); 
+	                	  this.broadcastMsg(doctorReg, msg);
+	                  }
+	                  else
+	                  {
+	                	  doctorReg.Register(client);
+	                	  session.getBasicRemote().sendText(msg); 
+	                  }
+	        }
+	        catch ( IllegalStateException e)
+			{
+				 log.error(" Failed to send message to client: "+e.getMessage());
+			}
+	        catch (IOException e) 
+	        {
+	              log.error("Failed to send message to client: "+e.getMessage());      
+	              try {
+	                  session.close();
+	              } catch (IOException e1) {
+	                  // Ignore
+	              }
+	        }
+			catch (Exception e)
+			{
+				  log.error("Failed to send message to client: "+e.getMessage());
+			}
+	    	 
+	    	 
+	    }
+	    
+	    private void broadcastMsg(DlgcClientRegistry reg, String msg) {
+			// TODO Auto-generated method stub
+	    	if (msg == null)
+	    		return;
+	    	
+	    	synchronized(reg){
+	    		
+		    		for (Map.Entry<String, DlgcClient> client : reg.m_registryMap.entrySet())
+		    		{
+		    			try{
+		    				if (client.getValue().m_connectionType.equalsIgnoreCase("WEBSOCKET_SESSION"))
+		    					client.getValue().m_webSession.getBasicRemote().sendText(msg); 
+		    			}
+						catch ( IllegalStateException e)
+						{
+							 log.error("broadcastMsg Error: Failed to send message to client: "+e.getMessage());
+						}
+				        catch (IOException e) 
+				        {
+				              log.error("broadcastMsg Error: Failed to send message to client: "+e.getMessage());      
+				        }
+						catch (Exception e)
+						{
+							  log.error("broadcastMsg Error: Failed to send message to client: "+e.getMessage());
+						}
+		    		}
+	    	}
+			
+		}
+
+		private String createRegisterUsersMsg(DlgcClientRegistry reg) {
+			// TODO Auto-generated method stub
+	    	String msg = null;
+	    	synchronized(reg){
+	    		JSONObject obj = new JSONObject();
+	    		obj.put("type", "translator");
+	    		JSONArray list = new JSONArray();
+	    		for (Map.Entry<String, DlgcClient> client : reg.m_registryMap.entrySet())
+	    		{
+	    			JSONObject p = new JSONObject();
+	   		    	 p.put("name",client.getValue().m_name);
+	   		    	 p.put("session_type",client.getValue().m_connectionType);
+	   		 	     p.put("key",client.getValue().m_URI);
+	              	 list.add(p);
+	            }
+	    		obj.put("lists", list);
+	    		msg = obj.toJSONString();
+	    	}  	
+	    	
+	    	return msg;
+			
+		}
+
+		@OnClose
+	    public void OnClose(Session session) {
+	      
+	    	log.info(" OnClose: session Id =" + session.getId());
+	    	//removeSessionCleanup(session);
+	    	DlgcClient client =  (DlgcClient) session.getUserProperties().get("CLIENT_OBJ");
+			if (client!=null)
+			{
+				 client.Release();
+				 DlgcClientRegistry translatorReg = (DlgcClientRegistry)mySAs.getAttribute("TRANSLATOR_REGISTRY");
+                 DlgcClientRegistry doctorReg = (DlgcClientRegistry)mySAs.getAttribute("DOCTOR_REGISTRY");
+				if (client.m_clientType.equalsIgnoreCase("doctor"))
+					doctorReg.UnRegister(client);
+				else
+				{
+					translatorReg.UnRegister(client);
+					 String msg = createRegisterUsersMsg(translatorReg); 
+		           	 this.broadcastMsg(doctorReg, msg);
+				}
+			}
+				
+	    	
+	    }
+	    
+	    
+	    
+	    
+	  /*  protected void removeSessionCleanup(Session session)
+	    {
+	       	MediaSession mediaSession= (MediaSession) session.getUserProperties().get("MEDIASESSION");
+	    	if (mediaSession != null)
+	    	{
+	    		DlgcParticipant p = (DlgcParticipant)mediaSession.getAttribute("PARTICIPANT_OBJ");
+	    		if (p!=null)
+	    		{
+	    			DlgcConference conf = (DlgcConference)mediaSession.getAttribute("CONFERENCE_OBJ");
+	    			conf.RemoveParticipant(p);
+	    		}
+	    	
+	    		//mediaSession.release();
+	    	}
+	    	
+	    }
+	    
+	    protected void removeSipSessionCleanup(SipServletRequest req)
+	    {
+	       	MediaSession mediaSession= (MediaSession) req.getSession().getAttribute("MEDIA_SESSION");   	
+	    	
+	       	if (mediaSession != null)
+	    	{
+	    		DlgcParticipant p = (DlgcParticipant)mediaSession.getAttribute("PARTICIPANT_OBJ");
+	    		if (p!=null)
+	    		{
+	    			DlgcConference conf = (DlgcConference)mediaSession.getAttribute("CONFERENCE_OBJ");
+	    			conf.RemoveParticipant(p);
+	    		}
+	    	
+	    		//mediaSession.release();
+	    	}
+	    }*/
+	    
+	    @OnError
+	    public void onError(Session session, Throwable t) {
+	          //	removeSessionCleanup(session);
+	    }
+	
+	    
+	    public static SipFactory sip289factory = null;
+		public static SipApplicationSession appSipSession= null;
+		public static String sasSipId=null;
+		public static String sipServletHandler=null;
+
+		static String	applicationUserNamePropertyId = "DlgcConvergedOutboundDemo";
+		static String	applicationDisplayNamePropertyId = "DlgcConvergedOutboundDemo";
+	
+		private final String	applicationSipAddressPropertyId = "application.sip.address";
+		private final String	applicationSipPortPropertyId = "application.sip.port";
+	
+		
+		String 	emApplicationIpAddrStr = null;
+		int 	emApplicationPortInt = 0	;
+		String 	externalSipTOAIpAddrStr = null;
+		static public String  propertyEarlyUserURI = null;
+		static public String propertyWebRtcUserURI = null;
+		int 	externalSipTOAPortInt = 0;
+		String  externalSipTOAUsername = null;
+		
+	
+	private static Logger log = LoggerFactory.getLogger(DlgcConvergedOutboundDemo.class);
+	private static Lock confLock;
+	public static SipSessionsUtil sessionsUtil;
+	private transient SipApplicationSession mySAs = null;
+	
+}

@@ -1,0 +1,18 @@
+.bashrc additions:
+
+export JAVA_HOME=/usr/java/jdk1.7.0_80
+export CATALINA_HOME=/home/apachetomcat/mss-3.1.633-apache-tomcat-7.0.64
+#### Bellow export if for SSL. Actual location will differ.
+export LD_LIBRARY_PATH=/home/apachetomcat/mss-3.1.633-apache-tomcat-7.0.64/lib/lib
+
+export DIALOGIC_DEMO_PROPERTY_FILE=${CATALINA_HOME}/conf/Dialogic/dlgc_demos.properties
+
+Copy following files to ${CATALINA_HOME}/conf/Dialogic:
+dlgc_demos.properties
+conf_room.json
+log4j2.xml
+
+Dial SIP:
++19738503460=participant@<ASIPAddress>:5080
+Dial Web:
+https://<ASIPAddress>:8443/DialogicConference

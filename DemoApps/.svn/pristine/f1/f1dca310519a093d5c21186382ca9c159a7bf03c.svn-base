@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sip-app id="SipApp_ID"  xmlns:javaee="http://java.sun.com/xml/ns/javaee"  xmlns="http://www.jcp.org/xml/ns/sipservlet" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:schemaLocation="http://www.jcp.org/xml/ns/sipservlet http://www.jcp.org/xml/ns/sipservlet/sip-app_1_1.xsd http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+
+  <app-name>Dialogic-Samples</app-name>
+  <javaee:display-name>Dialogic-Samples</javaee:display-name>
+  
+  <session-config>
+         <javaee:session-timeout>0</javaee:session-timeout>
+   </session-config>
+  
+   <distributable />  
+   
+   <listener>
+  	<javaee:description>IPMS Keep Alive</javaee:description>
+  	<javaee:display-name>KeepAliveMonitor</javaee:display-name>
+  	<javaee:listener-class>com.vendor.dialogic.javax.media.mscontrol.sip.DlgcMsMonitorServlet</javaee:listener-class>
+  </listener>
+  
+   <servlet>
+  	<javaee:description>IPMS Keep Alive Monitor</javaee:description> 
+  	<javaee:display-name>KeepAliveMonitor</javaee:display-name>
+  	<javaee:servlet-name>DlgcMsMonitorServlet</javaee:servlet-name>
+      <javaee:servlet-class>com.vendor.dialogic.javax.media.mscontrol.sip.DlgcMsMonitorServlet</javaee:servlet-class>
+      <javaee:load-on-startup>1</javaee:load-on-startup>
+  </servlet>
+  
+  <servlet>
+  	<javaee:description>Component receiving SIP request and response from IPMS</javaee:description>
+  	<javaee:display-name>DlgcSipServlet</javaee:display-name>
+  	<javaee:servlet-name>DlgcSipServlet</javaee:servlet-name>
+      <javaee:servlet-class>com.vendor.dialogic.javax.media.mscontrol.sip.DlgcSipServlet</javaee:servlet-class>
+      <javaee:load-on-startup>2</javaee:load-on-startup>
+  </servlet>
+  
+  <listener>
+  	<javaee:description>DlgcSipServletListener</javaee:description>
+  	<javaee:display-name>DlgcSipServletListener</javaee:display-name>
+  	<javaee:listener-class>com.vendor.dialogic.javax.media.mscontrol.sip.DlgcSipServlet</javaee:listener-class>
+  </listener>
+      
+   
+  
+  <servlet>
+  	<javaee:description>Simple Player Test</javaee:description>
+  	<javaee:display-name>DlgcPlayerTest</javaee:display-name>
+  	<javaee:servlet-name>DlgcPlayerTest</javaee:servlet-name>
+  	 <javaee:load-on-startup>3</javaee:load-on-startup>
+      <javaee:servlet-class>testing.unit.DlgcPlayerTest</javaee:servlet-class>
+  </servlet>
+  <listener>
+  	<javaee:description>DlgcPlayerTest</javaee:description>
+  	<javaee:display-name>DlgcPlayerTest</javaee:display-name>
+  	<javaee:listener-class>testing.unit.DlgcPlayerTest</javaee:listener-class>
+  </listener>
+  
+  
+  <servlet>
+  	<javaee:description>Test for simple IVR Recorder </javaee:description>
+  	<javaee:display-name>DlgcRecorderTest</javaee:display-name>
+  	<javaee:servlet-name>DlgcRecorderTest</javaee:servlet-name>
+  	<javaee:load-on-startup>4</javaee:load-on-startup>
+    <javaee:servlet-class>testing.unit.DlgcRecorderTest</javaee:servlet-class>
+  </servlet>
+  <listener>
+  	<javaee:description>DlgcRecorderTest</javaee:description>
+  	<javaee:display-name>DlgcRecorderTest</javaee:display-name>
+  	<javaee:listener-class>testing.unit.DlgcRecorderTest</javaee:listener-class>
+  </listener>
+ 
+
+  <servlet>
+  	<javaee:description>Test for simple Signal Detector Prompt and collect</javaee:description>
+  	<javaee:display-name>DlgcDtmfPromptCollectTest</javaee:display-name>
+  	<javaee:servlet-name>DlgcDtmfPromptCollectTest</javaee:servlet-name>
+  	<javaee:load-on-startup>5</javaee:load-on-startup>
+    <javaee:servlet-class>testing.unit.DlgcDtmfPromptCollectTest</javaee:servlet-class>
+  </servlet>
+  <listener>
+  	<javaee:description>DlgcDtmfPromptCollectTest</javaee:description>
+  	<javaee:display-name>DlgcDtmfPromptCollectTest</javaee:display-name>
+  	<javaee:listener-class>testing.unit.DlgcDtmfPromptCollectTest</javaee:listener-class>
+  </listener>
+  
+
+  <servlet>
+  	<javaee:description>Test for simple Signal Detector Dtmf Async test</javaee:description>
+  	<javaee:display-name>DlgcDtmfAsyncTest</javaee:display-name>
+  	<javaee:servlet-name>DlgcDtmfAsyncTest</javaee:servlet-name>
+  	  	<javaee:load-on-startup>6</javaee:load-on-startup>
+      <javaee:servlet-class>testing.unit.DlgcDtmfAsyncTest</javaee:servlet-class>
+  </servlet>
+   <listener>
+  	<javaee:description>DlgcDtmfAsyncTest</javaee:description>
+  	<javaee:display-name>DlgcDtmfAsyncTest</javaee:display-name>
+  	<javaee:listener-class>testing.unit.DlgcDtmfAsyncTest</javaee:listener-class>
+  </listener>
+  
+  
+  <servlet>
+  	<javaee:description>DlgcPlayerPerformanceTestt</javaee:description>
+  	<javaee:display-name>DlgcPlayerPerformanceTest</javaee:display-name>
+  	<javaee:servlet-name>DlgcPlayerPerformanceTest</javaee:servlet-name>
+  	  	<javaee:load-on-startup>7</javaee:load-on-startup>
+      <javaee:servlet-class>testing.unit.DlgcPlayerPerformanceTest</javaee:servlet-class>
+  </servlet>
+   <listener>
+  	<javaee:description>DlgcPlayerPerformanceTest</javaee:description>
+  	<javaee:display-name>DlgcPlayerPerformanceTest</javaee:display-name>
+  	<javaee:listener-class>testing.unit.DlgcPlayerPerformanceTest</javaee:listener-class>
+  </listener>
+  
+  
+   <servlet>
+  	<javaee:description>Dialogic Test Conference Demo</javaee:description>
+  
+  	<javaee:display-name>JMCConferenceServlet</javaee:display-name>
+  	<javaee:servlet-name>JMCConferenceServlet</javaee:servlet-name>
+      <javaee:servlet-class>testing.jmc_conference.JMCConferenceServlet</javaee:servlet-class>
+  </servlet>
+ 
+   <servlet>
+  	<javaee:description>Dialogic Bridge  XMS Conference Demo</javaee:description>
+  	
+  	<javaee:display-name>DlgcBridgeServlet</javaee:display-name>
+  	<javaee:servlet-name>DlgcBridgeServlet</javaee:servlet-name>
+      <javaee:servlet-class>testing.bridge_conference.DlgcBridgeServlet</javaee:servlet-class>
+  </servlet>
+  
+  
+  <servlet>
+  	<javaee:description>Dialogic Early Media Bridge XMS Conference Demo</javaee:description>
+  	
+  	<javaee:display-name>DlgcEMBridgeServlet</javaee:display-name>
+  	<javaee:servlet-name>DlgcEMBridgeServlet</javaee:servlet-name>
+      <javaee:servlet-class>testing.emedia_bridge_conference.DlgcEMBridgeServlet</javaee:servlet-class>
+  </servlet>
+  
+  
+    
+  <servlet>
+  	<javaee:description>Dialogic Reference Conference Demo With Outbound Call</javaee:description>
+  	
+  	<javaee:display-name>DlgcReferenceConferenceWithOutBCallServlet</javaee:display-name>
+  	<javaee:servlet-name>DlgcReferenceConferenceWithOutBCallServlet</javaee:servlet-name> 	
+      <javaee:servlet-class>testing.reference_conf_demo_with_outb_call.DlgcReferenceConferenceWithOutBCallServlet</javaee:servlet-class>
+  </servlet>
+  
+  
+<servlet-selection>
+
+<servlet-mapping>
+<servlet-name>DlgcMsMonitorServlet</servlet-name>
+<pattern>
+<and>
+<equal>
+<var>request.method</var>
+<value>INVITE</value>
+</equal>
+<equal>
+<var>request.to.uri.user</var>
+<value></value>
+</equal>
+</and>
+</pattern>
+</servlet-mapping>
+
+<servlet-mapping>
+<servlet-name>DlgcSipServlet</servlet-name>
+<pattern>
+<and>
+<equal>
+<var>request.method</var>
+<value>INVITE</value>
+</equal>
+<equal>
+<var>request.to.uri.user</var>
+<value></value>
+</equal>
+</and>
+</pattern>
+</servlet-mapping>
+
+<servlet-mapping>
+<servlet-name>DlgcPlayerTest</servlet-name>
+<pattern>
+<and>
+<equal>
+<var>request.method</var>
+<value>INVITE</value>
+</equal>
+<equal>
+<var>request.to.uri.user</var>
+<value>DlgcPlayerDemo</value>
+</equal>
+</and>
+</pattern>
+</servlet-mapping>
+
+
+<servlet-mapping>
+<servlet-name>DlgcRecorderTest</servlet-name>
+<pattern>
+<and>
+<equal>
+<var>request.method</var>
+<value>INVITE</value>
+</equal>
+<equal>
+<var>request.to.uri.user</var>
+<value>DlgcRecorderDemo</value>
+</equal>
+</and>
+</pattern>
+</servlet-mapping>
+
+
+<servlet-mapping>
+<servlet-name>DlgcDtmfPromptCollectTest</servlet-name>
+<pattern>
+<and>
+<equal>
+<var>request.method</var>
+<value>INVITE</value>
+</equal>
+<equal>
+<var>request.to.uri.user</var>
+<value>DlgcPromptCollectDemo</value>
+</equal>
+</and>
+</pattern>
+</servlet-mapping>
+
+
+<servlet-mapping>
+<servlet-name>DlgcDtmfAsyncTest</servlet-name>
+<pattern>
+<and>
+<equal>
+<var>request.method</var>
+<value>INVITE</value>
+</equal>
+<equal>
+<var>request.to.uri.user</var>
+<value>DlgcAsyncDtmfDemo</value>
+</equal>
+</and>
+</pattern>
+</servlet-mapping>
+
+<servlet-mapping>
+  <servlet-name>DlgcPlayerPerformanceTest</servlet-name>
+  <pattern>
+    <and>
+      <equal>
+        <var>request.method</var>
+        <value>INVITE</value>
+      </equal>
+      <equal>
+        <var>request.to.uri.user</var>
+        <value>pp</value>
+      </equal>
+    </and>
+  </pattern>
+</servlet-mapping>
+
+
+<servlet-mapping>
+<servlet-name>JMCConferenceServlet</servlet-name>
+<pattern>
+<and>
+<equal>
+<var>request.method</var>
+<value>INVITE</value>
+</equal>
+<equal>
+<var>request.to.uri.user</var>
+<value>DlgcMultiConferenceDemo</value>
+</equal>
+</and>
+</pattern>
+</servlet-mapping>
+
+<servlet-mapping>
+<servlet-name>DlgcBridgeServlet</servlet-name>
+<pattern>
+<and>
+<equal>
+<var>request.method</var>
+<value>INVITE</value>
+</equal>
+<equal>
+<var>request.to.uri.user</var>
+<value>DlgcBridgeDemo</value>
+</equal>
+</and>
+</pattern>
+</servlet-mapping>
+
+<servlet-mapping>
+<servlet-name>DlgcEMBridgeServlet</servlet-name>
+<pattern>
+<and>
+<equal>
+<var>request.method</var>
+<value>INVITE</value>
+</equal>
+<equal>
+<var>request.to.uri.user</var>
+<value>DlgcEarlyMediaBridgeDemo</value>
+</equal>
+</and>
+</pattern>
+</servlet-mapping>
+
+
+
+<servlet-mapping>
+<servlet-name>DlgcReferenceConferenceWithOutBCallServlet</servlet-name>
+<pattern>
+<and>
+<equal>
+<var>request.method</var>
+<value>INVITE</value>
+</equal>
+<equal>
+<var>request.to.uri.user</var>
+<value>DlgcAvConferenceDemo</value>
+</equal>
+</and>
+</pattern>
+</servlet-mapping>
+
+
+</servlet-selection>
+  
+  
+  </sip-app>
+  
+  

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sip-app>
+
+  <app-name>Dialogic-Converged-IVR-Demo</app-name>
+  <display-name>Dialogic-Converged-Demo</display-name>
+
+  <session-config>
+    <session-timeout>0</session-timeout>
+  </session-config>
+
+  <servlet>
+    <description>XMS Keep Alive Monitor</description> 
+    <display-name>KeepAliveMonitor</display-name>
+    <servlet-name>DlgcMsMonitorServlet</servlet-name>
+    <servlet-class>com.vendor.dialogic.javax.media.mscontrol.sip.DlgcMsMonitorServlet</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <listener>
+    <listener-class>
+      com.vendor.dialogic.javax.media.mscontrol.sip.DlgcMsMonitorServlet
+    </listener-class>               
+  </listener>
+
+  <servlet>
+    <description>Component receiving SIP request and response from XMS</description>
+    <display-name>DlgcSipServlet</display-name>
+    <servlet-name>DlgcSipServlet</servlet-name>
+    <servlet-class>com.vendor.dialogic.javax.media.mscontrol.sip.DlgcSipServlet</servlet-class>
+    <load-on-startup>2</load-on-startup>
+  </servlet>
+  <listener>
+    <listener-class>
+      com.vendor.dialogic.javax.media.mscontrol.sip.DlgcSipServlet
+    </listener-class>               
+  </listener>
+  
+  <servlet>
+    <description>Converged Record and Play Conference Demo</description>
+    <display-name>DlgcConvergedConferenceWithIvrDemo</display-name>
+    <servlet-name>DlgcConvergedConferenceWithIvrDemo</servlet-name>
+    <load-on-startup>4</load-on-startup>
+    <servlet-class>web_converged_demo.record_play_conference.DlgcConvergedConferenceWithIvrDemo</servlet-class>
+  </servlet>
+  <listener>
+    <listener-class>
+      web_converged_demo.record_play_conference.DlgcConvergedConferenceWithIvrDemo
+    </listener-class>               
+  </listener>
+
+
+  <servlet-selection>
+
+    <servlet-mapping>
+      <servlet-name>DlgcMsMonitorServlet</servlet-name>
+      <pattern>
+        <and>
+          <equal>
+            <var>request.method</var>
+            <value>INVITE</value>
+          </equal>
+          <equal>
+            <var>request.to.uri.user</var>
+            <value></value>
+          </equal>
+        </and>
+      </pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+      <servlet-name>DlgcSipServlet</servlet-name>
+      <pattern>
+        <and>
+          <equal>
+            <var>request.method</var>
+            <value>INVITE</value>
+          </equal>
+          <equal>
+            <var>request.to.uri.user</var>
+            <value></value>
+          </equal>
+        </and>
+      </pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+      <servlet-name>DlgcConvergedConferenceWithIvrDemo</servlet-name>
+      <pattern>
+        <and>
+          <equal>
+            <var>request.method</var>
+            <value>INVITE</value>
+          </equal>
+          <contains>
+            <var>request.to.uri.user</var>
+            <value>DlgcConvergedConferenceWithIvrDemo=</value>
+          </contains>
+        </and>
+      </pattern>  
+    </servlet-mapping>
+    
+  </servlet-selection>
+</sip-app>
+
+

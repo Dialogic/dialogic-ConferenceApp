@@ -1,0 +1,58 @@
+package web_converged_demo.clicktocall;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class DlgcClientRegistry {
+	public DlgcClientRegistry()
+	{
+		m_registryMap =  Collections.synchronizedMap(new HashMap<String,DlgcClient>());
+	}
+
+	public  synchronized boolean Register(DlgcClient client)
+	{
+		String key=client.m_URI;
+	
+		log.info("Register client key = "+key);
+		m_registryMap.put(key,client);
+		
+		return true;
+	}
+	
+	public synchronized DlgcClient FindRegister(String key)
+	{
+		log.info("FindRegister client key = "+key);
+		return m_registryMap.get(key);
+	}
+	
+	public synchronized void  UnRegister(DlgcClient client)
+	{
+		String key=client.m_URI;
+		log.info("UnRegister client key = "+key);
+		m_registryMap.remove(key);
+	}
+	
+	public synchronized DlgcClient FindAvailableRegister() {
+		
+		DlgcClient c = null;
+		for (Map.Entry<String, DlgcClient> client : m_registryMap.entrySet())
+		{
+			if (client.getValue().m_state==CLIENT_STATE.INIT)
+			{
+				c = client.getValue();
+				break;
+			}
+		
+		}
+		return c;
+	}
+	
+	Map<String,DlgcClient> m_registryMap;
+	private static Logger log = LoggerFactory.getLogger(DlgcClientRegistry.class);
+	
+	
+}

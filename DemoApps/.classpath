@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jdk1.7.0_79"/>
+	<classpathentry kind="lib" path="extPackage/extjars/dialogicmsmltypes-5.3-Trunk-1089.jar"/>
+	<classpathentry kind="lib" path="extPackage/extjars/dialogicsmiltypes-5.3-Trunk-1089.jar"/>
+	<classpathentry kind="lib" path="extPackage/extjars/jain-sip-sdp-1.2.91.jar"/>
+	<classpathentry kind="lib" path="extPackage/extjars/json_simple-1.1.jar"/>
+	<classpathentry kind="lib" path="extPackage/extjars/license.txt"/>
+	<classpathentry kind="lib" path="extPackage/extjars/log4j-1.2.15.jar"/>
+	<classpathentry kind="lib" path="extPackage/extjars/mscontrol.jar"/>
+	<classpathentry kind="lib" path="extPackage/extjars/slf4j-api-1.7.2.jar"/>
+	<classpathentry kind="lib" path="extPackage/extjars/slf4j-log4j12-1.7.2.jar"/>
+	<classpathentry kind="lib" path="extPackage/extjars/xbean.jar"/>
+	<classpathentry kind="lib" path="extPackage/geronimo-commonj_1.1_spec-1.0.jar"/>
+	<classpathentry kind="lib" path="extPackage/jain-sip-api-1.2.jar"/>
+	<classpathentry kind="lib" path="extPackage/jain-sip-ri-1.2.91.jar"/>
+	<classpathentry kind="lib" path="extPackage/jsr173_1.0_api.jar"/>
+	<classpathentry kind="lib" path="extPackage/mail.jar"/>
+	<classpathentry kind="lib" path="extPackage/tomcat/client/Mobicents/servlet-api.jar"/>
+	<classpathentry kind="lib" path="extPackage/tomcat/client/Mobicents/sip-servlets-spec-3.0.536.jar"/>
+	<classpathentry kind="lib" path="extPackage/tomcat/websocket-api.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

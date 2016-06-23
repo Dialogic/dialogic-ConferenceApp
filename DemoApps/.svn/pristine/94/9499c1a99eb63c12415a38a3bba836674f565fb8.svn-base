@@ -1,0 +1,1164 @@
+package web_converged_demo.clicktocall;
+
+import java.io.IOException;
+import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.media.mscontrol.MediaEventListener;
+import javax.media.mscontrol.MediaSession;
+import javax.media.mscontrol.MsControlException;
+import javax.media.mscontrol.MsControlFactory;
+import javax.media.mscontrol.Parameters;
+import javax.media.mscontrol.join.Joinable;
+import javax.media.mscontrol.networkconnection.NetworkConnection;
+import javax.media.mscontrol.networkconnection.SdpPortManager;
+import javax.media.mscontrol.networkconnection.SdpPortManagerEvent;
+import javax.media.mscontrol.networkconnection.SdpPortManagerException;
+import javax.servlet.ServletException;
+import javax.servlet.sip.Address;
+import javax.servlet.sip.SipApplicationSession;
+import javax.servlet.sip.SipServletRequest;
+import javax.servlet.sip.SipServletResponse;
+import javax.servlet.sip.SipSession;
+import javax.servlet.sip.SipURI;
+import javax.websocket.Session;
+
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class DlgcClient implements Serializable {
+	
+	
+	public class DlgcSdpPortEventListener implements MediaEventListener<SdpPortManagerEvent>, Serializable
+	{
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 5742674704860593132L;
+		
+
+		//@SuppressWarnings("unchecked")
+		@Override
+		public void onEvent(SdpPortManagerEvent event)
+		{	
+			SdpPortManager sdp = event.getSource();
+			MediaSession ms = sdp.getMediaSession();
+			//SipSession session = (SipSession) ms.getAttribute("SIP_SESSION");
+		
+			DlgcClient client =  (DlgcClient) ms.getAttribute("CLIENT_OBJ");
+            
+        	log.info("DlgcSdpPortEventListener::Type " + event.getEventType() );
+			log.info("DlgcSdpPortEventListener::Source " + event.getSource().toString());
+			log.info("DlgcSdpPortEventListener::ErrorText " + event.getErrorText());	
+			
+			if (client == null)
+				return;
+							
+			if (event.getEventType().equals(SdpPortManagerEvent.ANSWER_GENERATED))
+			{
+				log.info("IIIII SdpPortManagerEvent ANSWER_GENERATED IIIII");
+				client.SetState(CLIENT_STATE.IVR);
+			/*	if (client.m_clientType.equalsIgnoreCase("WEBSOCKET_SESSION"))
+				{
+					byte[] sdpDesc=null;
+					try {
+						sdpDesc = sdp.getMediaServerSessionDescription();
+						
+						JSONObject obj = new JSONObject();
+						obj.put("type", "answer");
+						String s1 = new String(sdpDesc);
+						obj.put("sdp", s1);
+						obj.put("id",client.m_nc.getURI().toString());
+						client.m_webSession.getBasicRemote().sendText(obj.toJSONString());
+						client.SetState(CLIENT_STATE.IVR);
+						
+					} catch (SdpPortManagerException e) {
+						// TODO Auto-generated catch block
+						client.SetState(CLIENT_STATE.FAILED);
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						client.SetState(CLIENT_STATE.FAILED);
+						e.printStackTrace();
+					}
+					
+				}
+				else
+				{
+					//SipServletRequest request = (SipServletRequest) ms.getAttribute("REQUEST");
+					log.info("IIIII SdpPortManagerEvent ANSWER_GENERATED IIIII");
+					client.SetState(CLIENT_STATE.IVR);
+					//SipServletResponse response = request.createResponse(SipServletResponse.SC_OK);
+					try
+					{
+						//response.setContent(sdp.getMediaServerSessionDescription(), "application/sdp");
+						//response.send();
+						client.SetState(CLIENT_STATE.IVR);
+					}
+					catch (UnsupportedEncodingException e)
+					{
+						client.SetState(CLIENT_STATE.FAILED);
+						e.printStackTrace();
+					}
+					catch (SdpPortManagerException e)
+					{
+						client.SetState(CLIENT_STATE.FAILED);
+						e.printStackTrace();
+					}
+					catch (IOException e)
+					{
+						client.SetState(CLIENT_STATE.FAILED);
+						e.printStackTrace();
+					}
+				}*/
+			}
+			else if (event.getEventType().equals(SdpPortManagerEvent.ANSWER_PROCESSED))
+			{
+				log.info("IIIII SdpPortManagerEvent ANSWER_PROCESSED IIIII");
+				//SipServletResponse response = (SipServletResponse) session.getAttribute("RESPONSE");
+				client.SetState(CLIENT_STATE.IVR);
+				/*if (response != null)
+				{
+					try
+					{
+						response.createAck().send();
+					}
+					catch (IOException e)
+					{
+						e.printStackTrace();
+						client.SetState(CLIENT_STATE.FAILED);
+					}
+				}
+				*/
+			}
+			else if (event.getEventType().equals(SdpPortManagerEvent.OFFER_GENERATED))
+			{
+				log.info("IIIII SdpPortManagerEvent OFFER_GENERATED IIIII");
+				if (client.m_clientType.equalsIgnoreCase("translator"))
+				{
+					try {
+						client.SetOutboundOfferSdp(new String (sdp.getMediaServerSessionDescription()));
+						client.SetState(CLIENT_STATE.IVR);
+					} catch (SdpPortManagerException e) {
+						// TODO Auto-generated catch block
+						client.SetState(CLIENT_STATE.FAILED);
+						e.printStackTrace();
+					}
+				}
+				
+				
+				
+			}
+			
+			synchronized (client){
+				log.info("before send notification");
+				client.notify();
+				log.info("after send notification");
+			}
+		}
+	}
+	
+	public DlgcClient(String clientName,
+								String clientType,
+								String connectionType,
+								Address URI, 
+								Session webSession,
+								SipSession sipSession,
+								MsControlFactory mscFactory,
+								DlgcClientRegistry reg,
+								DlgcConvergedOutboundDemo servlet)
+	{
+		m_name=clientName;
+		m_clientType = clientType; 
+		m_connectionType=connectionType;
+		m_sipListeningAddress = URI;
+		if (m_sipListeningAddress!=null)
+			m_URI=m_sipListeningAddress.getURI().toString();
+		else if (sipSession != null)
+			m_URI = sipSession.getId();
+		else if (webSession!=null)
+			m_URI= webSession.getId();
+		m_servlet = servlet;
+		m_webSession = webSession;
+		m_sipSession=sipSession;
+		m_reg = reg;
+		m_nc = null;
+		m_state = CLIENT_STATE.INIT;
+		m_ncMediaSession= null;
+		m_doctorNc = null;
+		m_bridgeNc = null;
+		this.m_msFactory = mscFactory;
+		
+		initializeConnectionAddresses();
+	}
+	
+	
+	public void SetOutboundOfferSdp(String sdp) {
+		// TODO Auto-generated method stub
+		if (sdp != null)
+			m_msOutboundSdp=sdp;
+		else
+			m_msOutboundSdp = null;
+	}
+
+
+	public void SetAnswerSdp(byte[] sdpDesc) {
+		// TODO Auto-generated method stub
+		if (sdpDesc != null)
+			m_answerSdp=new String(sdpDesc);
+		else
+			m_answerSdp = null;
+		
+	}
+
+
+	public void SetNetworkConnection(NetworkConnection nc)
+	{
+		m_nc = nc;
+	}
+	public CLIENT_STATE GetState()
+	{
+		return m_state;
+	}
+	public void SetState(CLIENT_STATE state)
+	{
+		m_state = state;
+	}
+	
+	public boolean Join(DlgcClient client)
+	{
+		boolean bRet = true;
+		try {
+			switch (m_state)
+			{
+			case IVR:		
+					m_nc.join(Joinable.Direction.DUPLEX, client.m_nc);
+					m_state = CLIENT_STATE.CONF;
+					client.m_state = CLIENT_STATE.CONF;
+					this.m_confMode = CONF_MODE.BRIDGE;	
+					this.m_bridgeNc = client;
+					//client.SetDoctor(this);
+				break;
+			case CONF:
+				if (m_confMode ==CONF_MODE.BRIDGE )
+				{
+					m_nc.unjoin(m_bridgeNc.m_nc);
+				
+					if (createConf())
+					{
+						if (m_conf.AddClient(this))
+						{
+							m_confMode =CONF_MODE.MIXER;
+							if (m_conf.AddClient(m_bridgeNc))
+							{
+								m_bridgeNc = null;
+								bRet= m_conf.AddClient(client);
+							}
+							else
+								bRet = false;	
+						}
+						else
+							bRet = false;
+					}
+					else
+						bRet = false;
+				}
+				else if (m_confMode ==CONF_MODE.MIXER )
+				{
+					bRet=m_conf.AddClient(client);
+				}
+				break;
+			default:
+				bRet = false;
+				log.error("Invalid State");
+				break;
+			}
+		} catch (MsControlException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				bRet = false;
+			}
+		return bRet;
+	}
+	
+	public void Unjoin(DlgcClient client)
+	{
+		if (m_clientType.equalsIgnoreCase("doctor"))
+		{
+			try {
+				switch (m_state)
+				{
+				case IVR:		
+					break;
+				case CONF:
+					if (m_confMode ==CONF_MODE.BRIDGE )
+					{
+						m_nc.unjoin(client.m_nc);
+						m_bridgeNc=null;
+						m_nc.release();
+						m_state= CLIENT_STATE.INIT;
+					}
+					else if (m_confMode ==CONF_MODE.MIXER )
+					{
+						m_conf.RemoveClient(client);
+						if (m_conf.GetPanticipantSize()<=1)
+						{
+							m_conf.Release();
+							m_nc.release();
+							m_state= CLIENT_STATE.INIT;
+							m_conf = null;
+						}
+					}
+					break;
+				default:
+					log.error("Invalid State");
+					break;
+				}
+			} catch (MsControlException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+			}
+			try {
+				if (m_state == CLIENT_STATE.INIT)
+				{
+					if (m_connectionType.equalsIgnoreCase("WEBSOCKET_SESSION"))
+						this.m_webSession.getBasicRemote().sendText("{\"type\":\"bye\",  \"description\" : \"connection close\"}");
+				}
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			catch ( IllegalStateException e)
+			{
+				e.printStackTrace();
+			}
+			
+		}
+	}
+	 
+	 private boolean createConf() {
+		// TODO Auto-generated method stub
+		
+		SipApplicationSession mySAs =  DlgcConvergedOutboundDemo.sessionsUtil.getApplicationSessionByKey("DIALOGIC_OUTBOUND_DEMO", true);
+		
+	    m_conf= new DlgcConference(this.toString(),this.m_msFactory);					
+		log.info("****************CreateMediaMixer = "+this.toString()+"***************************");
+		String mxMode = (String)mySAs.getAttribute("MIXER_MODE");
+		String confSize = (String)mySAs.getAttribute("MIXER_VIDEO_SIZE");
+		Boolean bActiveTalker = (Boolean)mySAs.getAttribute("MIXER_VIDEO_VAS");
+		Boolean bControlLeg = (Boolean)mySAs.getAttribute("MIXER_VIDEO_CONTROL_LEG");
+		
+		if (bActiveTalker == null)
+			bActiveTalker = false;
+		if (bControlLeg == null)
+			bControlLeg = false;
+		if (confSize == null)
+			confSize ="VGA";
+		if (mxMode == null)
+			mxMode ="AUDIO_VIDEO";
+			
+		Parameters params = m_msFactory.createParameters();
+						
+		if (bActiveTalker == false)
+		{
+			//ms.setAttribute("connector.asn.louder.sample.time", new Integer(5) );		
+			//SVN Add Active Input (ASN) To Mixer
+			/*params.put(MediaMixer.ENABLED_EVENTS, MixerEvent.ACTIVE_INPUTS_CHANGED );	   //enable active talker event
+			params.put(MediaMixer.MAX_ACTIVE_INPUTS, 4);*/
+		}
+		boolean bRet = m_conf.CreateConference(mxMode, confSize, params,bActiveTalker,bControlLeg);
+		if (bRet == false)
+			m_conf = null;
+	    return bRet;
+	}
+
+
+	private synchronized boolean  processOffer(String SDP)
+	 {
+		 boolean bRet =true;
+		 try 
+		 {
+			 m_ncMediaSession =m_msFactory.createMediaSession();
+			Parameters pmap = m_ncMediaSession.createParameters();
+			
+			Integer stimeout = new Integer(5000);
+			pmap.put(MediaSession.TIMEOUT, stimeout);
+			//pmap.put(DlgcParametersExt.DLGC_TEST, stimeout);
+			m_ncMediaSession.setParameters(pmap); 
+			
+			m_nc = m_ncMediaSession.createNetworkConnection(NetworkConnection.BASIC);
+			
+			//not needed for this unit test sample just using it to demonstrate 
+			Parameters sdpConfiguration = m_ncMediaSession.createParameters();
+			Map<String,String>  configurationData = new HashMap<String,String>();
+			configurationData.put("SIP_REQ_URI_USERNAME", "msml=777");
+			if (this.m_connectionType.equalsIgnoreCase("WEBSOCKET_SESSION"))
+			{
+				//configurationData.put("webrtc", "yes");
+				configurationData.put("Supported", "dlgc-encryption-dtls, dlgc-ice, dlgc-rtcp-feedback-audiovideo");
+			}
+			sdpConfiguration.put(SdpPortManager.SIP_HEADERS, configurationData);
+			m_nc.setParameters(sdpConfiguration);
+			
+			DlgcSdpPortEventListener la = new DlgcSdpPortEventListener();
+			m_nc.getSdpPortManager().addListener(la);
+		
+			
+			log.info("DlgcClient::createNc.... Setting mediaSession");
+			if (m_connectionType.equalsIgnoreCase("WEBSOCKET_SESSION"))
+				m_ncMediaSession.setAttribute("WEBSOCKET_SESSION",m_webSession);
+			m_ncMediaSession.setAttribute("NETWORK_CONNECTION", m_nc);
+			m_ncMediaSession.setAttribute("SESSION_SDP", SDP);
+			m_ncMediaSession.setAttribute("CLIENT_OBJ", this);
+		}
+		catch (MsControlException e)
+		{
+			try {
+				if (m_connectionType.equalsIgnoreCase("WEBSOCKET_SESSION"))
+					this.m_webSession.getBasicRemote().sendText("{\"type\":\"error\",  \"description\" : \"SERVICE UNAVAILABLE\"}");
+				else
+				{
+					
+				}
+				
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			if (m_ncMediaSession!=null)
+				m_ncMediaSession.release();
+			return false;
+		}
+			
+			
+		try
+		{
+			if (SDP == null)
+			{
+				m_nc.getSdpPortManager().generateSdpOffer();
+			}
+			else
+			{
+				byte[] remoteSdp = SDP.getBytes();
+				m_nc.getSdpPortManager().processSdpOffer(remoteSdp);
+			}
+			this.wait();	
+			log.info("processOffer returned");
+			log.info("client state ="+m_state.toString());
+			if (m_state != CLIENT_STATE.IVR)
+			{
+				try {
+					if (m_connectionType.equalsIgnoreCase("WEBSOCKET_SESSION"))
+						this.m_webSession.getBasicRemote().sendText("{\"type\":\"ERROR\",  \"description\" : \"SERVICE UNAVAILABLE\"}");
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				if (m_ncMediaSession!=null)
+					m_ncMediaSession.release();
+				bRet = false;
+			}
+		} 
+		catch (MsControlException e)
+		{
+			try {
+				if (m_connectionType.equalsIgnoreCase("WEBSOCKET_SESSION"))
+					this.m_webSession.getBasicRemote().sendText("{\"type\":\"ERROR\",  \"description\" : \"SERVICE UNAVAILABLE\"}");
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			if (m_ncMediaSession!=null)
+				m_ncMediaSession.release();
+			bRet = false;
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			if (m_ncMediaSession!=null)
+				m_ncMediaSession.release();
+			bRet = false;
+		}
+		
+		return bRet;
+	 }
+	 
+	 
+	 public boolean SendOffer(String sdp) {
+		 	boolean bRet = false;
+		 	
+			if (this.m_clientType.equalsIgnoreCase("translator"))
+			{
+				if (m_state == CLIENT_STATE.INIT)
+				{
+					if (processOffer(sdp))
+					{
+						if (sendOutBoundOffer())
+							bRet =processOutboundAnswerSdp();
+					}
+				}
+			}
+			return bRet;
+	 }
+	 
+	 private synchronized boolean  processOutboundAnswerSdp() {
+		// TODO Auto-generated method stub
+		 boolean bRet = false;
+		 if (m_answerSdp == null)
+			 return bRet;
+		 try {
+			m_ncMediaSession.setAttribute("SESSION_SDP", m_answerSdp); 
+			m_nc.getSdpPortManager().processSdpAnswer(m_answerSdp.getBytes());
+			this.wait();
+			if (m_state == CLIENT_STATE.IVR)
+			{
+				if (this.m_connectionType.equalsIgnoreCase("SIP_SESSION"))
+				{
+					SipServletResponse response = (SipServletResponse)this.m_outBoundSession.getAttribute("RESPONSE");
+					response.createAck().send();
+				}
+				bRet = true;
+			}
+		} catch (SdpPortManagerException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (MsControlException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		 
+		return bRet;
+	}
+
+
+	private synchronized boolean sendOutBoundOffer() {
+		boolean bRet = true;
+		
+		if (m_connectionType.equalsIgnoreCase("WEBSOCKET_SESSION"))
+		{
+			JSONObject obj = new JSONObject();
+			obj.put("type", "offer");
+			obj.put("sdp", m_msOutboundSdp.replaceAll("RTP/SAVP ", "RTP/SAVPF "));
+			
+			log.debug("M -Sdp: "+m_msOutboundSdp.replaceAll("RTP/SAVP ", "RTP/SAVPF "));
+			try {
+				m_webSession.getBasicRemote().sendText(obj.toJSONString());
+				this.wait();
+				if (m_state != CLIENT_STATE.IVR)
+					bRet = false;
+				
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				bRet = false;
+				e.printStackTrace();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				bRet = false;
+				e.printStackTrace();
+			} 
+		}
+		else
+		{
+			// TODO Auto-generated method stub
+			log.debug("sendOutBoundOffer() => OUT- sendOutBoundOffer with media server SDP = " + this.m_msOutboundSdp );
+			SipServletRequest request = createTUAInviteRequest(this.m_msOutboundSdp);
+			m_outBoundSession = request.getSession();
+			
+			/*this.m_outBoundSessionID = m_outBoundSession.getId();
+			this.tuaSipApplicationSessionID = m_outBoundSession.getApplicationSession().getId();
+			participant.clientSSID = this.m_outBoundSessionID;
+			participant.clientSASID = this.tuaSipApplicationSessionID ; 
+			
+			participant.ms.setAttribute("ParticipantId", participant.clientSSID);*/
+			//this.m_ncMediaSession.setAttribute("SIP_SESSION", m_outBoundSession);
+			m_outBoundSession.setAttribute("CLIENT_OBJ", this);
+			try {
+				log.debug("Sending the following outbound call: " + request.toString());
+				request.send();
+				this.wait();
+				if (m_state != CLIENT_STATE.IVR)
+					bRet = false;
+				
+				
+				log.debug("Return from sending the outbound call");
+			} catch (IOException e) {
+				e.printStackTrace();
+				bRet = false;
+				
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				bRet = false;
+			}
+		}
+		
+		return bRet;
+	}
+	
+	protected void initializeConnectionAddresses()
+	{
+
+		if (this.m_clientType.equalsIgnoreCase("translator") && this.m_connectionType.equalsIgnoreCase("SIP_SESSION"))
+		{
+			m_appSipURI = DlgcConvergedOutboundDemo.sip289factory.createSipURI(DlgcConvergedOutboundDemo.applicationDisplayNamePropertyId, m_servlet.emApplicationIpAddrStr);
+			m_appSipURI.setPort(m_servlet.emApplicationPortInt);
+			m_appSipURI.setUser(DlgcConvergedOutboundDemo.applicationUserNamePropertyId);	
+			log.info("app sip uri ="+m_appSipURI.toString());
+			m_appSipFullAddress = DlgcConvergedOutboundDemo.sip289factory.createAddress(m_appSipURI);
+			m_appSipFullAddress.setDisplayName(DlgcConvergedOutboundDemo.applicationDisplayNamePropertyId);
+			log.info("app sip full address="+m_appSipFullAddress.toString());
+			m_outboundSipURI = (SipURI) m_sipListeningAddress.getURI();
+			log.info("Client outboud SIP URI="+m_outboundSipURI.toString());
+			
+			
+		}
+		
+		//m_outboundSipURI.setPort(servlet.externalSipTOAPortInt);
+	
+		//tuaSipFullAddress.setDisplayName(servlet.externalSipTOAUsername);
+
+	}
+	
+	
+	public void setAnsweredSDP(SipServletRequest request, String msAnsweredSDP )
+	{
+		if (request != null) {
+			try {
+				request.setContent (msAnsweredSDP, SIP_INVITE_SDP_CONTENT_TYPE);
+			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+
+	SipServletRequest createTUAInviteRequest(String msAnsweredSDP)
+	{
+		
+		SipApplicationSession appSession = DlgcConvergedOutboundDemo.sip289factory.createApplicationSession();
+		appSession.setExpires(0);
+		SipServletRequest tuaSipInviteRequest = DlgcConvergedOutboundDemo.sip289factory.createRequest(appSession,
+																									  SIP_INVITE_METHOD,
+																									  m_appSipFullAddress,
+																									  this.m_sipListeningAddress);
+		
+		if (tuaSipInviteRequest != null)
+		{
+			SipSession requestSipSession = tuaSipInviteRequest.getSession();
+			try {
+				try {
+					if ( msAnsweredSDP != null )
+						tuaSipInviteRequest.setContent (msAnsweredSDP, SIP_INVITE_SDP_CONTENT_TYPE);
+				} catch (UnsupportedEncodingException e) {
+					
+					e.printStackTrace();
+				}
+				requestSipSession.setHandler(DlgcConvergedOutboundDemo.sipServletHandler);
+				tuaSipInviteRequest.setRequestURI(m_outboundSipURI);
+			} catch (ServletException e) {
+				e.printStackTrace();
+			}
+		}
+		return tuaSipInviteRequest;
+	}	
+	
+	public void handle183Response(SipServletResponse response)
+	{
+		/*try {
+			this.participant.presentState.connectedLegResponse( this.participant,  response );
+		} catch (MsControlException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/
+	}
+	
+	public void handle200Response(SipServletResponse response)
+	{
+		/*
+		try {
+			this.participant.presentState.connectedLegResponse( this.participant,  response );
+			SipServletRequest ackReq = response.createAck();
+			try {
+				ackReq.send();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} catch (MsControlException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/
+	}
+	
+	public void sendBye()
+	{
+		if (m_outBoundSession != null && m_outBoundSession.isValid() )
+		{
+			//SipServletResponse resp = (SipServletResponse)m_outBoundSession.getAttribute("TUA_INITIAL_200_OK_RESPONSE");
+			try {
+				SipServletRequest byeReq = this.m_outBoundSession.createRequest("BYE");
+				byeReq.send();
+			}
+			catch (IOException e) {
+				log.error("Unable to send TUA BYE: "+e);
+			}
+		}
+		else
+		{
+			if (m_webSession!=null)
+			{
+				try {
+					this.m_webSession.getBasicRemote().sendText("{\"type\":\"bye\",  \"description\" : \"connection close\"}");
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}catch ( IllegalStateException e)
+				{
+					e.printStackTrace();
+				}
+			}
+		}
+		m_state= CLIENT_STATE.INIT;
+		
+		if (this.m_ncMediaSession!=null)
+		{
+			this.m_ncMediaSession.release();
+		}
+	}
+
+
+	public boolean Record() {
+			// TODO Auto-generated method stub
+			return false;
+		}
+	 
+	 public boolean Play(String uri) {
+			// TODO Auto-generated method stub
+			return false;
+		}
+	 
+	 
+	 private boolean processDoctorRequest(String msg)
+	 {
+		 boolean bRet = true;
+	 	 String errorMsg="";    
+	 	 
+	 	String msgType="";
+	 	 
+         try {
+        	JSONParser parser=new JSONParser();	           
+        	Object obj;
+			obj = parser.parse(msg);
+	
+	 		JSONObject jsonObject = (JSONObject) obj;
+	 		msgType = (String) jsonObject.get("type");    
+	 		String invitee = (String) jsonObject.get("invitee");
+			DlgcClient translator = m_reg.FindRegister(invitee); 
+		 	
+			switch (msgType)
+			{
+ 				case "offer":
+ 					switch (m_state)
+ 					{	            						
+ 						case INIT:                 
+     						String sdp = (String) jsonObject.get("sdp");
+     						if (translator!=null)
+     						{
+            					if (processOffer(sdp))
+            					{     							
+            						byte[] sdpDesc=null;
+            			        	try {
+            							sdpDesc = m_nc.getSdpPortManager().getMediaServerSessionDescription();
+            						} catch (SdpPortManagerException e1) {
+            							bRet = false;
+         								errorMsg = "{\"type\":\"error\", \"description\" : \"Can not create a network connection\"}";
+            							e1.printStackTrace();
+            							break;
+            						} catch (MsControlException e1) {
+            							bRet = false;
+         								errorMsg = "{\"type\":\"error\", \"description\" : \"Can not create a network connection\"}";
+            							e1.printStackTrace();
+            							break;
+            						}
+            			        
+            			        	if (m_webSession != null)
+            			        	{
+            			        		
+            							try {
+            								JSONObject obj1= new JSONObject();
+            								obj1.put("type", "answer");
+            								String s1 = new String(sdpDesc);
+            								obj1.put("sdp", s1);
+            								m_webSession.getBasicRemote().sendText(obj1.toJSONString());
+            			    			} catch (IOException e) {
+            								// TODO Auto-generated catch block
+            			    				bRet = false;
+             								errorMsg = "{\"type\":\"error\", \"description\" : \"Can not create a network connection\"}";
+            								e.printStackTrace();
+            								break;
+            							}
+            			        	}
+            			        	else
+            			        	{
+            				        	SipServletRequest request = (SipServletRequest) m_sipSession.getAttribute("REQUEST");
+            							SipServletResponse response = request.createResponse(SipServletResponse.SC_OK);
+            							try {
+            								response.setContent(sdpDesc, "application/sdp");
+            								//response.send();
+            								response.send();
+            							} catch (IOException e) {
+            								bRet = false;
+             								errorMsg = "{\"type\":\"error\", \"description\" : \"Can not create a network connection\"}";
+            								e.printStackTrace();
+            								break;
+            							}
+            			        	}
+     							}
+     							else
+     							{
+     								bRet = false;
+     								errorMsg = "{\"type\":\"error\", \"description\" : \"Can not create a network connection\"}";
+     								break;
+     							}	            								
+     						}
+     						else
+     						{
+     							bRet = false;
+ 								errorMsg = "{\"type\":\"error\", \"description\" : \"Invitee is not a register user\"}";
+ 								break;
+     						}
+     			
+ 						case IVR:
+ 						case CONF:
+ 							if (!translator.SendOffer(null ))
+							{
+									bRet = false;
+									errorMsg = "{\"type\":\"error\", \"description\" : \"Can not make an offer to the invitee\"}";
+									break;
+							}
+ 							if (Join(translator))
+							{
+ 								translator.SetDoctor(this);
+								/*bRet = false;
+								errorMsg = "{\"type\":\"error\", \"description\" : \"Can not join the invitee\"}";*/
+							}
+ 							else
+ 							{
+ 								bRet = false;
+								errorMsg = "{\"type\":\"error\", \"description\" : \"Can not join the invitee\"}";
+ 							}
+ 							break;
+ 						default:
+ 							break;
+ 					}
+ 					break;
+ 				case "hangup":
+ 					switch (m_state)
+ 					{	            						
+ 						case CONF:
+ 							translator.Release();
+ 							break;
+ 						default:
+ 							break;
+ 					}
+ 					break;
+ 				case "play":
+ 					String uri = (String) jsonObject.get("play_uri");
+ 					switch (m_state)
+ 					{	            						
+ 						case INIT:                 
+     						String sdp = (String) jsonObject.get("sdp");
+     						if (processOffer(sdp))
+     						{
+     							bRet = false;
+     							errorMsg = "{\"type\":\"error\", \"description\" : \"Can not create a network connection\"}";	      
+     							break;
+     						}
+ 						case IVR:
+ 							if (!Play(uri))
+ 							{
+ 								bRet = false;
+     							errorMsg = "{\"type\":\"error\", \"description\" : \"Play failed\"}";	      
+ 							}	            								
+ 							break;
+ 						case CONF:
+ 								bRet = false;
+								errorMsg = "{\"type\":\"error\", \"description\" : \"Can not join the invitee\"}";
+ 							break;
+ 						default:
+ 							break;
+ 					}
+ 					break;
+ 				case "record":
+ 					if (m_state == CLIENT_STATE.CONF)
+ 					{
+ 						if (!Record())
+ 						{
+							bRet = false;
+							errorMsg = "{\"type\":\"error\", \"description\" : \"Can not start the recording\"}";
+						}
+ 					}
+ 					else
+ 					{
+							bRet = false;
+							errorMsg = "{\"type\":\"error\", \"description\" : \"Nothing to be recorded\"}";
+					}
+ 					break;
+ 				default:
+ 					break;
+			}           
+	 	} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			bRet = false;
+			errorMsg = "{\"type\":\"error\", \"description\" : \"request msg is invalid\"}";
+		}
+      
+        if (bRet == false)
+        {
+        	if (m_webSession !=null)
+        	{
+				try {
+					m_webSession.getBasicRemote().sendText(errorMsg);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+        	}
+        	else
+        	{
+        		SipServletRequest request = (SipServletRequest) m_sipSession.getAttribute("REQUEST");
+				SipServletResponse response = request.createResponse(SipServletResponse.SC_REQUEST_TERMINATED);
+				try {
+					response.send();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}				
+        	}
+        }
+    /*    else
+        {
+        	if (msgType.equalsIgnoreCase("offer"))
+        	{
+	        	byte[] sdpDesc=null;
+	        	try {
+					sdpDesc = m_nc.getSdpPortManager().getMediaServerSessionDescription();
+				} catch (SdpPortManagerException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (MsControlException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+	        
+	        	if (m_webSession != null)
+	        	{
+	        		
+					try {
+						JSONObject obj = new JSONObject();
+						obj.put("type", "answer");
+						String s1 = new String(sdpDesc);
+						obj.put("sdp", s1);
+						m_webSession.getBasicRemote().sendText(obj.toJSONString());
+	    			} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+	        	}
+	        	else
+	        	{
+		        	SipServletRequest request = (SipServletRequest) m_sipSession.getAttribute("REQUEST");
+					SipServletResponse response = request.createResponse(SipServletResponse.SC_OK);
+					try {
+						response.setContent(sdpDesc, "application/sdp");
+						//response.send();
+						response.send();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+	        	}
+        	}
+        }*/
+        	
+        return bRet;
+	 }
+	 
+	 public   void ProcessRequest(String msg)
+	 {  
+		 	switch(m_clientType)
+	 		{
+	 			case "doctor":
+	 				processDoctorRequest(msg);
+	 				break;
+	 			case "translator":
+	 				processTranslatorRequest(msg);
+	 				break;
+	 			default:
+	 				break;
+	 		}
+	}
+	 
+	 
+	private void processTranslatorRequest(String msg) {
+		// TODO Auto-generated method stub
+		 try {
+        	JSONParser parser=new JSONParser();	           
+        	Object obj;
+			obj = parser.parse(msg);
+	
+	 		JSONObject jsonObject = (JSONObject) obj;
+	 		String msgType = (String) jsonObject.get("type");       
+		 	
+			switch (msgType)
+			{
+ 				case "answer":
+ 					String sdp = (String)jsonObject.get("sdp");
+					m_answerSdp = sdp;
+					synchronized (this){
+						this.notify();
+					}
+				      break;
+ 				case "hangup":
+ 					Release();
+				default:
+				      break;
+			}
+		}
+		catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			
+			//errorMsg = "{\"type\":\"error\", \"description\" : \"request msg is invalid\"}";
+			log.error("answer sdp is invalid");
+		}
+
+
+	}
+
+	public void SetDoctor(DlgcClient nc)
+	{
+		m_doctorNc = nc;
+		m_state = CLIENT_STATE.CONF;
+	}
+	
+	public synchronized void Release() {
+		// TODO Auto-generated method stub
+		switch(m_clientType)
+ 		{
+ 			case "doctor":
+ 				doctorRelease();
+ 				break;
+ 			case "translator":
+ 				translatorRelease();
+ 				break;
+ 			default:
+ 				break;
+ 		}
+		
+	}
+
+	private void translatorRelease() {
+		// TODO Auto-generated method stub
+		if (m_doctorNc!=null)
+		{
+			m_doctorNc.Unjoin(this);
+			m_doctorNc = null;
+			sendBye();
+			//m_ncMediaSession.release();
+		}
+		
+		m_state = CLIENT_STATE.INIT;
+	}
+
+
+	private void doctorRelease() {
+		// TODO Auto-generated method stub
+		try {
+			switch (m_state)
+			{
+			
+			case CONF:
+				if (m_confMode ==CONF_MODE.BRIDGE )
+				{
+					m_state= CLIENT_STATE.IVR;
+					m_nc.unjoin(m_bridgeNc.m_nc);
+					
+					m_bridgeNc.Release();
+					m_bridgeNc=null;
+					
+				}
+				else if (m_confMode ==CONF_MODE.MIXER )
+				{
+					m_state= CLIENT_STATE.IVR;
+					m_conf.Release();
+					m_conf = null;
+				}
+			case IVR:		
+				this.m_ncMediaSession.release();
+				m_state= CLIENT_STATE.INIT;
+				break;
+			default:
+				log.error("Invalid State");
+				break;
+			}
+		} catch (MsControlException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+		}
+		
+	}
+
+	String m_name;
+	String m_clientType;
+	String m_connectionType;
+	String m_URI;
+	Session m_webSession;
+	NetworkConnection m_nc;
+	CLIENT_STATE m_state;
+	DlgcClientRegistry m_reg;
+	MsControlFactory m_msFactory;
+	MediaSession m_ncMediaSession;
+	SipSession m_sipSession;
+	String m_msOutboundSdp;
+	String m_answerSdp;
+	CONF_MODE m_confMode;
+	DlgcConference m_conf;
+	Address m_appSipFullAddress = null;
+	Address m_sipListeningAddress = null;
+	SipURI m_appSipURI = null;
+	SipURI m_outboundSipURI=null;
+	static  final String SIP_INVITE_METHOD = "INVITE";
+	static  final String SIP_INVITE_SDP_CONTENT_TYPE = "application/sdp";
+	DlgcConvergedOutboundDemo m_servlet = null;
+	SipSession m_outBoundSession = null;
+	
+	enum CONF_MODE {BRIDGE,MIXER}
+	private static Logger log = LoggerFactory.getLogger(DlgcClient.class);
+	private static final long serialVersionUID = -1L;
+	private DlgcClient m_bridgeNc;
+	private DlgcClient m_doctorNc;
+	boolean m_bVideo;
+	
+	
+	///DlgcEMBridgeParticipant participant = null;
+	
+	
+	
+}
+
+
+	
+
+

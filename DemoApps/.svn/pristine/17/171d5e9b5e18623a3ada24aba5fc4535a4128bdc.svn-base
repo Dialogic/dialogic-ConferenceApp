@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="10" status="ERROR">
+  <Appenders>
+    <File name="dialogic" fileName="../logs/Dialogic.log" append="false">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n"/>
+    </File>
+    <Console name="STDOUT" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n"/>
+    </Console>
+  </Appenders>
+
+  <Loggers>
+    <Logger name="com.vendor.dialogic" level="ERROR">
+      <AppenderRef ref="dialogic"/>
+      <!-- AppenderRef ref="STDOUT"/ -->
+    </Logger>
+    <Logger name="web_converged_demo.conference" level="ERROR">
+      <AppenderRef ref="dialogic"/>
+      <!-- AppenderRef ref="STDOUT"/ -->
+    </Logger>
+     <Logger name="web_converged_demo.clicktocall" level="ERROR">
+      <AppenderRef ref="dialogic"/>
+      <!-- AppenderRef ref="STDOUT"/ -->
+    </Logger>
+     <Logger name="web_converged_demo.record_play_conference" level="ERROR">
+      <AppenderRef ref="dialogic"/>
+      <!-- AppenderRef ref="STDOUT"/ -->
+    </Logger>
+  </Loggers>
+</Configuration>

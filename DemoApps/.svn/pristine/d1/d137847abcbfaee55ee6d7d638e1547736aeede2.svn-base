@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app id="WebApp_ID" version="2.5"
+  xmlns="http://java.sun.com/xml/ns/javaee"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+  <display-name>Dialogic-Demos</display-name>
+  <servlet>
+    <display-name>Keep Alive Monitor</display-name>
+    <servlet-name>DlgcMsMonitorServlet</servlet-name>
+    <servlet-class>com.vendor.dialogic.javax.media.mscontrol.sip.DlgcMsMonitorServlet</servlet-class>
+  </servlet>
+  <servlet>
+    <display-name>DlgcSipServlet</display-name>
+    <servlet-name>DlgcSipServlet</servlet-name>
+    <servlet-class>com.vendor.dialogic.javax.media.mscontrol.sip.DlgcSipServlet</servlet-class>
+  </servlet>
+  <servlet>
+    <display-name>DlgcPlayerTest</display-name>
+    <servlet-name>DlgcPlayerTest</servlet-name>
+    <servlet-class>testing.unit.DlgcPlayerTest</servlet-class>
+  </servlet>
+  <servlet>
+    <display-name>DlgcRecorderTest</display-name>
+    <servlet-name>DlgcRecorderTest</servlet-name>
+    <servlet-class>testing.unit.DlgcRecorderTest</servlet-class>
+  </servlet>
+
+  <servlet>
+    <display-name>DlgcDtmfPromptCollectTest</display-name>
+    <servlet-name>DlgcDtmfPromptCollectTest</servlet-name>
+    <servlet-class>testing.unit.DlgcDtmfPromptCollectTest</servlet-class>
+  </servlet>
+
+  <servlet>
+    <display-name>DlgcDtmfAsyncTest</display-name>
+    <servlet-name>DlgcDtmfAsyncTest</servlet-name>
+    <servlet-class>testing.unit.DlgcDtmfAsyncTest</servlet-class>
+  </servlet>
+
+  <servlet>
+    <display-name>DlgcSigGenTest</display-name>
+    <servlet-name>DlgcSigGenTest</servlet-name>
+    <servlet-class>testing.unit.DlgcSigGenTest</servlet-class>
+  </servlet>
+
+  <servlet>
+    <display-name>DlgcConferenceTest</display-name>
+    <servlet-name>DlgcConferenceTest</servlet-name>
+    <servlet-class>testing.unit.DlgcConferenceTest</servlet-class>
+  </servlet>
+  
+  <servlet>
+    <display-name>DlgcDriverSample</display-name>
+    <servlet-name>DlgcDriverSample</servlet-name>
+    <servlet-class>testing.unit.DlgcDriverSample</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>DlgcMsMonitorServlet</servlet-name>
+    <url-pattern>/DlgcMsMonitorServlet</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>DlgcSipServlet</servlet-name>
+    <url-pattern>/DlgcSipServlet</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>DlgcPlayerTest</servlet-name>
+    <url-pattern>/DlgcPlayerTest</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>DlgcRecorderTest</servlet-name>
+    <url-pattern>/DlgcRecorderTest</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>DlgcDtmfPromptCollectTest</servlet-name>
+    <url-pattern>/DlgcDtmfPromptCollectTest</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>DlgcDtmfAsyncTest</servlet-name>
+    <url-pattern>/DlgcDtmfAsyncTest</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>DlgcSigGenTest</servlet-name>
+    <url-pattern>/DlgcSigGenTest</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>DlgcConferenceTest</servlet-name>
+    <url-pattern>/DlgcConferenceTest</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>DlgcDriverSample</servlet-name>
+    <url-pattern>/DlgcDriverSample</url-pattern>
+  </servlet-mapping>
+
+</web-app>

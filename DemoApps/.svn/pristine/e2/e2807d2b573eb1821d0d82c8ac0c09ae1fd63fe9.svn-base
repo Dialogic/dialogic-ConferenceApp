@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!--  DIALOGIC CONFIDENTIAL  -->
+<!--  Copyright (C) 2005-2013 Dialogic Corporation. All Rights Reserved.  -->
+<!--  The source code contained or described herein and all documents related to  -->
+<!--  the source code ("Material") are owned by Dialogic Corporation or its  -->
+<!--  suppliers or licensors.  Title to the Material remains with Dialogic  -->
+<!--  Corporation or its suppliers and licensors.  The Material contains trade  -->
+<!--  secrets and proprietary and confidential information of Dialogic or its  -->
+<!--  suppliers and licensors.  The Material is protected by worldwide copyright  -->
+<!--  and trade secret laws and treaty provisions.  No part of the Material may be  -->
+<!--  used, copied, reproduced, modified, published, uploaded, posted, transmitted,  -->
+<!--  distributed, or disclosed in any way without Dialogic's prior express written  -->
+<!--  permission.  -->
+<!--  No license under any patent, copyright, trade secret or other intellectual  -->
+<!--  property right is granted to or conferred upon you by disclosure or delivery  -->
+<!--  of the Materials, either expressly, by implication, inducement, estoppel or  -->
+<!--  otherwise.  Any license under such intellectual property rights must be  -->
+<!--  express and approved by Dialogic in writing.  -->
+
+
+
+<project default="tomcat">
+
+	<!-- THE FOLLOWING ARE ALL SUPPORTED BUILD TARGETS. PLEASE NOTE THAT ANY  -->
+	<!-- TARGET PREFIXED WITH "scm_" IS FOR SCM USE ONLY!!!                   --> 
+
+	
+	<target name="tomcat" depends="create_manifest,create_war_tomcat"/>
+	
+
+	<target name="scm_tomcat" depends="scm_create_manifest,create_war_tomcat" />
+	
+	
+	<property name="beahome" value="C:\bea" />
+	<property environment="env" />
+	<property name="DEPLOY_DIR" value="./deploy" />
+	<property name="WEB_INF_DIR" value="./WEB-INF" />
+	<property name="IBM_DEPLOY_DIR" value="./deploy/IBM" />
+	<property name="ORACLE_DEPLOY_DIR" value="${DEPLOY_DIR}/ORACLE" />
+	<property name="JBOSS_DEPLOY_DIR" value="${DEPLOY_DIR}/jboss" />
+	<property name="TOMCAT_DEPLOY_DIR" value="${DEPLOY_DIR}/tomcat" />
+	<property name="TROPO_DEPLOY_DIR" value="${DEPLOY_DIR}/tropo" />
+	<property name="DLGJARBUILD" value="yes" />
+
+	<property name="SAMPLE_PROJ_ROOT" value="${DEPLOY_DIR}/dlgmsc_sample_project" />
+	<property name="SAMPLE_PROJ_NAME" value="${DEPLOY_DIR}/dlgmsc_sample_project" />
+	<property name="SAMPLE_PROJ_WEBINF" value="${SAMPLE_PROJ_ROOT}/WEB-INF" />
+	<property name="SAMPLE_PROJ_CLASSES" value="${SAMPLE_PROJ_ROOT}/WEB-INF/classes" />
+	<property name="SAMPLE_PROJ_LIB" value="${SAMPLE_PROJ_ROOT}/WEB-INF/lib" />
+	<property name="SAMPLE_PROJ_SRC" value="${SAMPLE_PROJ_ROOT}/src" />
+	<property name="SAMPLE_PROJ_TESTING" value="${SAMPLE_PROJ_ROOT}/src/testing" />
+	<property name="SAMPLE_PROJ_EXTLIB" value="./extPackage" />
+	
+	<!--property name="bamboo.planRepository.1.revision.number" value="1.0" /-->
+	
+	<!-- JAR FILE LOCATION FOR CONNECTOR AND DEMO APPLICATION -->
+	
+	<property name="OCCAS_DEMO_LIB" value="${SAMPLE_PROJ_EXTLIB}/occas/client" />
+	<property name="OCCAS_CONNECTOR_LIB" value="${SAMPLE_PROJ_EXTLIB}/occas/connector" />
+	<property name="JBOSS_DEMO_LIB" value="${SAMPLE_PROJ_EXTLIB}/jboss/client/TelScale" />
+	<property name="JBOSS_CONNECTOR_LIB" value="${SAMPLE_PROJ_EXTLIB}/jboss/connector" />
+	<property name="TOMCAT_DEMO_LIB" value="${SAMPLE_PROJ_EXTLIB}/tomcat/client/TelScale" />
+	<property name="TOMCAT_CONNECTOR_LIB" value="${SAMPLE_PROJ_EXTLIB}/tomcat/connector" />
+	
+	
+
+	<condition property="buildDlgmscJar">
+		<not>
+			<available file="${DEPLOY_DIR}/dlgmsc.jar" />
+		</not>
+	</condition>
+	
+	
+
+	<target name="get-java-version" >
+		<echo> java version= ${ant.java.version} </echo>
+		<condition property="javaVersion1.6" >
+			<equals arg1="${ant.java.version}" arg2="1.6"/>
+		</condition>
+	</target>
+		
+	<target name="clean">
+		<delete file="${WEB_INF_DIR}/sip.xml" />
+		<delete file="${WEB_INF_DIR}/web.xml" />
+		<delete includeemptydirs="true" quiet="true">
+			<fileset dir="WEB-INF/classes" includes="**/*" />
+		</delete>
+		<delete includeEmptyDirs="true" quiet="true">
+			<fileset dir="${DEPLOY_DIR}" />
+		</delete>
+		<delete file="MANIFEST.MF" />
+	</target>
+	
+	<!--target name="scm_create_manifest" depends="update_build_info"-->
+	<target name="scm_create_manifest">
+		<property file="BuildInfoFile.properties" />
+		<tstamp />
+		<manifest file="MANIFEST.MF">
+			<attribute name="Implementation-Vendor" value="${product.vendor}" />
+			<attribute name="Implementation-Title" value="${product.title}" />
+			<!--attribute name="Implementation-Version" value="${product.version} Build ${product.build.number}" /-->
+			<!--attribute name="Implementation-Version" value="${product.version} Build ${bamboo.planRepository.1.revision.number}" /-->
+			<attribute name="Implementation-Version" value="${product.version} (${bambooBuildNumber})" />
+			<attribute name="Built-Date" value="${TODAY}" />
+		</manifest>
+	</target>
+	
+	<target name="update_build_info">
+		<property name="header" value="##Generated file - do not modify!" />
+		<propertyfile file="BuildInfoFile.properties" comment="${header}">
+			<entry key="product.build.number" type="int" operation="+" default="0" />
+		</propertyfile>
+	</target>
+
+	<target name="create_manifest">
+		<property file="BuildInfoFile.properties" />
+		<tstamp />
+		<manifest file="MANIFEST.MF">
+			<attribute name="Build-By" value="${user.name}" />
+			<attribute name="Implementation-Vendor" value="${product.vendor}" />
+			<attribute name="Implementation-Title" value="${product.title}" />
+			<attribute name="Implementation-Version" value="${product.version} Build ${product.build.number} - Experimental" />
+			<attribute name="Built-Date" value="${TODAY}" />
+		</manifest>
+	</target>
+	
+	
+	
+	<!--SVN Create  new convergedDemo war by itself Oct 15 2014-->
+	<!--target name="create_war_tomcat" depends="create_jar_tomcat,unit_tests_tomcat,compileUnitTestTomcat,tomcat_create_sample_war" -->
+	<target name="create_war_tomcat" depends="
+		                                      compileConvergedDemoTomcat,
+											  tomcat_create_converged_demo_conference_sample_war,
+											  tomcat_create_converged_demo_clicktocall_sample_war">
+	</target>
+	
+	
+	
+	<!--SVN change target to create your typical demo dlgc_tests.war Oct 15 2014-->
+	<target name="tomcat_create_sample_war" depends="get-java-version">
+		<delete file="${WEB_INF_DIR}/sip.xml" />
+		<delete file="${WEB_INF_DIR}/web.xml" />
+		<copy file="./webAppVendorSpecifics/web.xml.oracle"  tofile="${WEB_INF_DIR}/web.xml" />
+		<copy file="./webAppVendorSpecifics/sip.xml.tomcat"  tofile="${WEB_INF_DIR}/sip.xml" />
+		<jar destfile="${TOMCAT_DEPLOY_DIR}/dlgmsc_tests.war" manifest="MANIFEST.MF">
+			<zipfileset dir="WEB-INF" prefix="WEB-INF" includes="*.xml" />
+			<!--zipfileset dir="extPackage/extjars" prefix="WEB-INF/lib" includes="*.jar" excludes="mscmltypes.jar"/-->
+			<zipfileset dir="extPackage/extjars" prefix="WEB-INF/lib" includes="dialogic309*.jar" />
+			<zipfileset dir="extPackage/extjars" prefix="WEB-INF/lib" includes="dialogicmsmltypes*.jar" />
+			<!--zipfileset dir="extPackage" prefix="WEB-INF/lib" includes="geronimo*.jar"/>
+			<zipfileset dir="extPackage" prefix="WEB-INF/lib" includes="jsr173_1.0_api.jar" />
+			<zipfileset dir="WEB-INF/classes/testing" prefix="WEB-INF/classes/testing"/>
+			<zipfileset dir="WEB-INF/classes" prefix="WEB-INF" includes="log4j.properties" /-->
+		</jar>
+	</target>
+	
+	
+	<target name="tomcat_create_converged_demo_clicktocall_sample_war" depends="get-java-version">
+		<if>
+			<equals arg1="${javaVersion1.6}" arg2="true"  />
+				<then>
+					<echo> Exclude Web Converged ClickToCall Demo</echo>
+				</then>
+				<else>
+					<echo> Include Web Converged ClickToCall Demo</echo>
+					<delete file="${WEB_INF_DIR}/sip.xml" />
+					<delete file="${WEB_INF_DIR}/web.xml" />
+					<copy file="./webAppVendorSpecifics/sip.xml.tomcat.webconvergedclicktocall"  tofile="${WEB_INF_DIR}/sip.xml" />
+					<copy file="./webAppVendorSpecifics/web.xml.oracle"  tofile="${WEB_INF_DIR}/web.xml" />
+					<jar destfile="${TOMCAT_DEPLOY_DIR}/dlgmsc_converged_clicktocall.war" manifest="MANIFEST.MF">
+						<zipfileset dir="WEB-INF" prefix="WEB-INF" includes="*.xml" />
+						<!--zipfileset dir="extPackage/extjars" prefix="WEB-INF/lib" includes="*.jar" excludes="jain-sip-*.jar"/>
+						<zipfileset dir="extPackage" prefix="WEB-INF/lib" includes="geronimo*.jar"/>
+						<zipfileset dir="extPackage" prefix="WEB-INF/lib" includes="jsr173_1.0_api.jar" />
+						<zipfileset dir="WEB-INF/classes" prefix="WEB-INF" includes="log4j.properties" /-->
+						<zipfileset dir="extPackage/extjars" prefix="WEB-INF/lib" includes="dialogic309*.jar" />
+						<zipfileset dir="extPackage/extjars" prefix="WEB-INF/lib" includes="dialogicmsmltypes*.jar" />
+						<zipfileset dir="WEB-INF/classes/web_converged_demo/clicktocall" prefix="WEB-INF/classes/web_converged_demo/clicktocall" />
+						<!--zipfileset dir="WEB-INF/classes" prefix="WEB-INF" includes="log4j.properties" /-->
+					</jar>					
+				</else>
+		</if>
+	</target>
+	
+	<target name="tomcat_create_converged_demo_conference_sample_war" depends="get-java-version">
+			<if>
+				<equals arg1="${javaVersion1.6}" arg2="true"  />
+					<then>
+						<echo> Exclude Web Converged Conference Demo</echo>
+					</then>
+					<else>
+						<echo> Include Web Converged Conference Demo</echo>
+						<delete file="${WEB_INF_DIR}/sip.xml" />
+						<delete file="${WEB_INF_DIR}/web.xml" />
+						<copy file="./webAppVendorSpecifics/sip.xml.tomcat.webconverged"  tofile="${WEB_INF_DIR}/sip.xml" />
+						<copy file="./webAppVendorSpecifics/web.xml.oracle"  tofile="${WEB_INF_DIR}/web.xml" />
+						<jar destfile="${TOMCAT_DEPLOY_DIR}/dlgmsc_converged_conference.war" manifest="MANIFEST.MF">
+							<zipfileset dir="WEB-INF" prefix="WEB-INF" includes="*.xml" />
+							<!--zipfileset dir="extPackage/extjars" prefix="WEB-INF/lib" includes="*.jar" excludes="jain-sip-*.jar"/>
+							<zipfileset dir="extPackage" prefix="WEB-INF/lib" includes="geronimo*.jar"/>
+							<zipfileset dir="extPackage" prefix="WEB-INF/lib" includes="jsr173_1.0_api.jar" />
+							<zipfileset dir="WEB-INF/classes" prefix="WEB-INF" includes="log4j.properties" /-->
+							<zipfileset dir="extPackage/extjars" prefix="WEB-INF/lib" includes="dialogic309*.jar" />
+							<zipfileset dir="extPackage/extjars" prefix="WEB-INF/lib" includes="dialogicmsmltypes*.jar" />
+							<zipfileset dir="WEB-INF/classes/web_converged_demo/conference" prefix="WEB-INF/classes/web_converged_demo/conference" />
+						</jar>					
+					</else>
+			</if>
+	</target>
+	
+	<target name="converged_demo_src_zip" 
+			depends="web_converged_conference_demo_src,
+					 web_converged_clicktocall_demo_src,
+					 web_converged_record_play_conference_demo_src">
+	</target>
+	
+	<target name="web_converged_conference_demo_src">
+		<zip destfile="${TOMCAT_DEPLOY_DIR}/dlgmsc_converged_conference.zip" basedir="./src/" excludes="**/function" includes="web_converged_demo/conference/**" update="true" />
+	</target>
+	
+	<target name="web_converged_clicktocall_demo_src">
+			<zip destfile="${TOMCAT_DEPLOY_DIR}/dlgmsc_converged_clicktocall.zip" basedir="./src/" excludes="**/function" includes="web_converged_demo/clicktocall/**" update="true" />
+	</target>
+	
+	<target name="web_converged_record_play_conference_demo_src">
+				<zip destfile="${TOMCAT_DEPLOY_DIR}/dlgmsc_converged_record_play_conference.zip" basedir="./src/" excludes="**/function" includes="web_converged_demo/record_play_conference/**" update="true" />
+	</target>
+	
+	
+	<taskdef resource="net/sf/antcontrib/antcontrib.properties">
+			<classpath>
+				<pathelement location="./ant-contrib-1.0b3.jar" />
+			</classpath>
+	</taskdef>
+	
+	
+	<target name="compileConvergedDemoTomcat" depends="get-java-version">
+			<if>
+				<equals arg1="${javaVersion1.6}" arg2="true"  />
+					<then>
+						<echo> Exclude Tomcat Any WEB Socket Demos</echo>
+					</then>
+					<else>
+						<echo> Include Tomcat Any WEB Socket Demos</echo>
+						<javac destdir="WEB-INF/classes" srcdir="src/web_converged_demo" debug="true" debuglevel="lines,vars,source"   includeantruntime="false">
+							<classpath>
+								<pathelement path="${TOMCAT_DEMO_LIB}/servlet-api.jar" />
+								<pathelement path="${TOMCAT_DEMO_LIB}/sip-servlets-spec-7.0.2.GA-TelScale.jar" />
+								<pathelement path="extPackage/jsr173_1.0_api.jar" />
+								<pathelement path="extPackage/extjars/xbean.jar" />
+								<!--pathelement path="extPackage/extjars/json_simple-1.1.jar" />
+								<pathelement path="extPackage/tomcat/websocket-api.jar" />
+								<pathelement path="extPackage/jain-sip-api-1.2.jar" />
+								<pathelement path="extPackage/jain-sip-ri-1.2.91.jar" />
+								<pathelement path="extPackage/extjars/jain-sip-sdp-1.2.91.jar" />
+								<pathelement path="extPackage/extjars/mscontrol.jar" />
+								<pathelement path="extPackage/extjars/slf4j-api-1.7.2.jar" />
+								
+								<pathelement path="extPackage/extjars/dialogicmsmltypes-5.2-GA-917.jar" /-->
+								 <pathelement path="${classpath}"/>
+								      <fileset dir="extPackage">
+								        <include name="**/*.jar"/>
+								      </fileset>
+								<!--pathelement path="extPackage/extjars/dlgcsmiltypes.jar" /-->
+							</classpath>
+						</javac>
+					</else>
+			</if>
+	</target>
+
+</project>

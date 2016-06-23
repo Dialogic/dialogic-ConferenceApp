@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sip-app id="SipApp_ID"  xmlns:javaee="http://java.sun.com/xml/ns/javaee"  xmlns="http://www.jcp.org/xml/ns/sipservlet" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:schemaLocation="http://www.jcp.org/xml/ns/sipservlet http://www.jcp.org/xml/ns/sipservlet/sip-app_1_1.xsd http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+
+  <app-name>Dialogic-Samples</app-name>
+  <javaee:display-name>Dialogic-Samples</javaee:display-name>
+  
+  <session-config>
+   <javaee:session-timeout>0</javaee:session-timeout>
+  </session-config>
+
+  <distributable />  
+
+  <!--servlet>
+    <javaee:description>XMS Keep Alive Monitor</javaee:description> 
+    <javaee:display-name>KeepAliveMonitor</javaee:display-name>
+    <javaee:servlet-name>DlgcMsMonitorServlet</javaee:servlet-name>
+    <javaee:servlet-class>com.vendor.dialogic.javax.media.mscontrol.sip.DlgcMsMonitorServlet</javaee:servlet-class>
+    <javaee:load-on-startup>1</javaee:load-on-startup>
+  </servlet>
+  
+  <listener>
+    <javaee:description>XMS Keep Alive</javaee:description>
+    <javaee:display-name>KeepAliveMonitor</javaee:display-name>
+    <javaee:listener-class>com.vendor.dialogic.javax.media.mscontrol.sip.DlgcMsMonitorServlet</javaee:listener-class>
+  </listener>
+  -->
+
+  <servlet>
+    <javaee:description>Component receiving SIP request and response from IPMS</javaee:description>
+    <javaee:display-name>DlgcSipServlet</javaee:display-name>
+    <javaee:servlet-name>DlgcSipServlet</javaee:servlet-name>
+    <javaee:servlet-class>com.vendor.dialogic.javax.media.mscontrol.sip.DlgcSipServlet</javaee:servlet-class>
+    <javaee:load-on-startup>2</javaee:load-on-startup>
+  </servlet>
+
+  <listener>
+    <javaee:description>DlgcSipServletListener</javaee:description>
+    <javaee:display-name>DlgcSipServletListener</javaee:display-name>
+    <javaee:listener-class>com.vendor.dialogic.javax.media.mscontrol.sip.DlgcSipServlet</javaee:listener-class>
+  </listener>
+
+  <servlet>
+    <javaee:description>Simple Player Test</javaee:description>
+    <javaee:display-name>DlgcPlayerTest</javaee:display-name>
+    <javaee:servlet-name>DlgcPlayerTest</javaee:servlet-name>
+    <javaee:load-on-startup>3</javaee:load-on-startup>
+    <javaee:servlet-class>testing.unit.DlgcPlayerTest</javaee:servlet-class>
+  </servlet>
+  <listener>
+    <javaee:description>DlgcPlayerTest</javaee:description>
+    <javaee:display-name>DlgcPlayerTest</javaee:display-name>
+    <javaee:listener-class>testing.unit.DlgcPlayerTest</javaee:listener-class>
+  </listener>
+
+    
+   <!--
+  <servlet>
+    <javaee:description>Independent Timer</javaee:description> 
+    <javaee:display-name>IndependentTimer</javaee:display-name>
+    <javaee:servlet-name>DlgcIndependentTimerServlet</javaee:servlet-name>
+    <javaee:servlet-class>testing.timer_demo.DlgcIndependentTimerServlet</javaee:servlet-class>
+    <javaee:load-on-startup>1</javaee:load-on-startup>
+  </servlet>
+  
+  <listener>
+    <javaee:description>Independent Timer</javaee:description>
+    <javaee:display-name>IndependentTimer</javaee:display-name>
+    <javaee:listener-class>testing.timer_demo.DlgcIndependentTimerServlet</javaee:listener-class>
+  </listener>
+  -->
+  
+  <servlet>
+    <javaee:description>Connector Dependent Timer</javaee:description> 
+    <javaee:display-name>ConnectorDependentTimer</javaee:display-name>
+    <javaee:servlet-name>DlgcConnectorDependentTimerServlet</javaee:servlet-name>
+    <javaee:servlet-class>testing.timer_demo.DlgcConnectorDependentTimerServlet</javaee:servlet-class>
+    <javaee:load-on-startup>1</javaee:load-on-startup>
+  </servlet> 
+  
+  <listener>
+    <javaee:description>Connector Dependent Timer</javaee:description>
+    <javaee:display-name>ConnectorDependentTimer</javaee:display-name>
+    <javaee:listener-class>testing.timer_demo.DlgcConnectorDependentTimerServlet</javaee:listener-class>
+  </listener>
+  
+
+  <servlet-selection>
+
+   <!-- servlet-mapping>
+      <servlet-name>DlgcMsMonitorServlet</servlet-name>
+      <pattern>
+        <and>
+          <equal>
+            <var>request.method</var>
+            <value>INVITE</value>
+          </equal>
+          <equal>
+            <var>request.to.uri.user</var>
+            <value></value>
+          </equal>
+        </and>
+      </pattern>
+    </servlet-mapping> -->
+
+    <servlet-mapping>
+      <servlet-name>DlgcSipServlet</servlet-name>
+      <pattern>
+        <and>
+          <equal>
+            <var>request.method</var>
+            <value>INVITE</value>
+          </equal>
+          <equal>
+            <var>request.to.uri.user</var>
+            <value></value>
+          </equal>
+        </and>
+      </pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+      <servlet-name>DlgcPlayerTest</servlet-name>
+      <pattern>
+        <and>
+          <equal>
+            <var>request.method</var>
+            <value>INVITE</value>
+          </equal>
+          <equal>
+            <var>request.to.uri.user</var>
+            <value>DlgcPlayerDemo</value>
+          </equal>
+        </and>
+      </pattern>
+    </servlet-mapping>
+   
+	
+     <!-- servlet-mapping>
+      <servlet-name>DlgcIndependentTimerServlet</servlet-name>
+      <pattern>
+        <and>
+          <equal>
+            <var>request.method</var>
+            <value>INVITE</value>
+          </equal>
+          <equal>
+            <var>request.to.uri.user</var>
+            <value></value>
+          </equal>
+        </and>
+      </pattern>
+      
+    </servlet-mapping> -->
+    
+    <servlet-mapping>
+      <servlet-name>DlgcConnectorDependentTimerServlet</servlet-name>
+      <pattern>
+        <and>
+          <equal>
+            <var>request.method</var>
+            <value>INVITE</value>
+          </equal>
+          <equal>
+            <var>request.to.uri.user</var>
+            <value></value>
+          </equal>
+        </and>
+      </pattern>
+    </servlet-mapping>
+    
+  </servlet-selection>
+</sip-app>
+
+
